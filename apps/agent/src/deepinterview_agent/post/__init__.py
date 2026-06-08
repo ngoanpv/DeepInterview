@@ -28,12 +28,13 @@ from ..shared_models import LanguageReport, ScoreCard
 from .evaluator import evaluate
 from .language_coach import coach
 from .report import generate_report
+from .verifier import verify_scores
 
 if TYPE_CHECKING:
     from ..core.deps import Deps
     from ..shared_models import ScoreRequest
 
-__all__ = ["run_score", "evaluate", "coach", "generate_report"]
+__all__ = ["run_score", "evaluate", "coach", "generate_report", "verify_scores"]
 
 
 def _missing_context_scorecard(session_id: str) -> ScoreCard:
@@ -68,6 +69,8 @@ async def run_score(req: ScoreRequest, deps: Deps) -> ScoreCard:
         return _missing_context_scorecard(req.session_id)
 
     comp_scores = await evaluate(ctx, deps)
+    if deps.settings.enable_score_verifier:
+        comp_scores = await verify_scores(ctx, comp_scores, deps)
     lang_report = await coach(ctx, deps)
     scorecard = await generate_report(ctx, comp_scores, lang_report, deps)
 
