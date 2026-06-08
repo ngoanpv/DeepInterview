@@ -58,6 +58,12 @@ class Settings(BaseSettings):
     livekit_api_key: str | None = None
     livekit_api_secret: str | None = None
 
+    # --- knowledge (LightRAG sidecar) ----------------------------------------
+    # When set, the knowledge adapter + /api/kb/ingest forward to this base URL;
+    # unset (the default) keeps everything fully offline. Env-overridable via
+    # LIGHTRAG_URL (pydantic-settings reads it by field name).
+    lightrag_url: str | None = None
+
     # --- service -------------------------------------------------------------
     agent_api_port: int = 8000
     default_language: str = "en"
