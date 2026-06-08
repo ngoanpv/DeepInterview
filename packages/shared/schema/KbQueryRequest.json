@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string"
+    },
+    "query": {
+      "type": "string"
+    },
+    "lang": {
+      "type": "string",
+      "enum": [
+        "en",
+        "vi",
+        "es",
+        "zh",
+        "hi",
+        "id",
+        "pt",
+        "fr",
+        "de",
+        "ja"
+      ]
+    }
+  },
+  "required": [
+    "user_id",
+    "query",
+    "lang"
+  ]
+}

@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install JS deps
+        run: pnpm install
+
+      - name: Sync Python deps (agent)
+        run: cd apps/agent && uv sync
+
+      - name: Generate schema
+        run: pnpm gen:schema
+
+      - name: Schema is up to date
+        run: git diff --exit-code packages/shared/schema
+
+      - name: Build
+        run: pnpm build
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test (Vitest + pytest)
+        run: pnpm test
+
+      # WP-12: the knowledge sidecar has its own uv project + offline tests
+      # (naive RAG backend); run them here so the full stack is covered in CI.
+      - name: Test lightrag sidecar
+        run: uv --directory services/lightrag run pytest
+
+      - name: Validate docker compose
+        run: docker compose config -q

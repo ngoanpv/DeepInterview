@@ -1,0 +1,101 @@
+name: Bug report
+description: Report something that is broken or behaving incorrectly.
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug! Please search
+        [existing issues](https://github.com/deepinterview/deepinterview/issues)
+        first to avoid duplicates.
+
+        **Security issue?** Do not file it here — email
+        `security@deepinterview.dev` instead (see `SECURITY.md`).
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear and concise description of the bug.
+      placeholder: When I click "Start interview", the page hangs and never connects.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Exact steps so we can see it too.
+      placeholder: |
+        1. Run `pnpm dev`
+        2. Go to /setup and upload sample CV + JD
+        3. Click "Start interview"
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: Affected package
+      description: Which part of the monorepo does this affect?
+      options:
+        - "apps/web (Next.js front end)"
+        - "apps/agent (Python LiveKit + LangGraph)"
+        - "packages/shared (TS ↔ Pydantic contracts)"
+        - "services/lightrag (knowledge sidecar)"
+        - "cli"
+        - "Other / not sure"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: How were you running it when the bug appeared?
+      options:
+        - "Offline / mock-first (no provider API keys set)"
+        - "Real providers (live LLM/STT/TTS/search keys set)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: version
+    attributes:
+      label: Version / commit
+      description: Output of `git rev-parse --short HEAD`, plus OS, Node, and Python versions if relevant.
+      placeholder: |
+        commit: abc1234
+        OS: macOS 15 / Ubuntu 24.04
+        Node: 22.x   pnpm: 9.x   Python: 3.11
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / output
+      description: Paste console output, stack traces, or screenshots. This is automatically formatted as code — no backticks needed. Please redact any secrets or personal data.
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I removed any secrets or personal data from the logs above.
+          required: true

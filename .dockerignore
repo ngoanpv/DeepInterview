@@ -1,0 +1,11 @@
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/__pycache__
+**/.venv
+**/*.egg-info
+.git
+.env
+.env.*
+!.env.example

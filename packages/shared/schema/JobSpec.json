@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "company_name": {
+      "type": "string"
+    },
+    "location": {
+      "default": null,
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "seniority": {
+      "type": "string",
+      "enum": [
+        "intern",
+        "junior",
+        "mid",
+        "senior",
+        "staff",
+        "principal"
+      ]
+    },
+    "must_have": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "nice_to_have": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "responsibilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tech_stack": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "raw_text": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title",
+    "company_name",
+    "seniority",
+    "must_have",
+    "nice_to_have",
+    "responsibilities",
+    "tech_stack",
+    "raw_text"
+  ]
+}

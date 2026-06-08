@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use DeepInterview, please cite it as below."
+title: DeepInterview
+abstract: >-
+  Open-source (AGPLv3), voice-first AI mock-interview platform. It reads a CV and
+  job description, researches the target company, runs an adaptive real-time voice
+  interview with a stylized video avatar, scores it, and coaches weak areas.
+  English-first, multilingual.
+type: software
+license: AGPL-3.0-only
+repository-code: "https://github.com/your-org/deepinterview"
+authors:
+  - name: "The DeepInterview contributors"

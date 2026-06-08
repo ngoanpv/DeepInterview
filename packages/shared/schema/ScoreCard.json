@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "overall_score": {
+      "type": "number"
+    },
+    "competency_scores": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "competency": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "weak",
+              "developing",
+              "solid",
+              "strong"
+            ]
+          }
+        },
+        "required": [
+          "competency",
+          "score",
+          "evidence",
+          "level"
+        ]
+      }
+    },
+    "strengths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "weaknesses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "weak_competencies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "model_answers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question_id": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "question_id",
+          "answer"
+        ]
+      }
+    },
+    "next_steps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "language_report": {
+      "type": "object",
+      "properties": {
+        "fluency_score": {
+          "type": "number"
+        },
+        "filler_word_count": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "clarity_score": {
+          "type": "number"
+        },
+        "code_switching_notes": {
+          "type": "string"
+        },
+        "pronunciation_notes": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "fluency_score",
+        "filler_word_count",
+        "clarity_score",
+        "code_switching_notes",
+        "pronunciation_notes",
+        "summary"
+      ]
+    },
+    "summary": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "overall_score",
+    "competency_scores",
+    "strengths",
+    "weaknesses",
+    "weak_competencies",
+    "model_answers",
+    "next_steps",
+    "language_report",
+    "summary"
+  ]
+}

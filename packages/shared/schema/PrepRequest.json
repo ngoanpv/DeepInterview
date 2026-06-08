@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "cv_url": {
+      "type": "string"
+    },
+    "jd_text": {
+      "type": "string"
+    },
+    "company": {
+      "type": "string"
+    },
+    "language_mode": {
+      "type": "object",
+      "properties": {
+        "primary": {
+          "type": "string",
+          "enum": [
+            "en",
+            "vi",
+            "es",
+            "zh",
+            "hi",
+            "id",
+            "pt",
+            "fr",
+            "de",
+            "ja"
+          ]
+        },
+        "mixed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "primary",
+        "mixed"
+      ]
+    }
+  },
+  "required": [
+    "cv_url",
+    "jd_text",
+    "company",
+    "language_mode"
+  ]
+}

@@ -1,0 +1,41 @@
+[project]
+name = "deepinterview-lightrag"
+version = "0.0.0"
+description = "DeepInterview knowledge sidecar — NaiveRAG by default, LightRAG + RAG-Anything + bge-m3 as an optional extra (WP-8)."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+    "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+# Real cross-lingual knowledge graph stack. NOT installed by default — the naive
+# backend above has zero ML deps so the service runs + tests fully offline.
+# Enable with: uv sync --extra rag   (then set RAG_BACKEND=lightrag)
+rag = [
+    "lightrag-hku",
+    "raganything",
+    "sentence-transformers",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lightrag_service"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "strengths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "probe_targets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "matched_skills": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "missing_skills": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "summary": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "strengths",
+    "gaps",
+    "probe_targets",
+    "matched_skills",
+    "missing_skills",
+    "summary"
+  ]
+}
