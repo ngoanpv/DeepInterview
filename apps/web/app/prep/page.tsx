@@ -6,7 +6,9 @@ import { getUser } from "@/lib/supabase/server";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/language-toggle";
+import type { StudyModule } from "@deepinterview/shared";
 import { SAMPLE_SCORECARD } from "@/lib/sample-scorecard";
+import { requestCoachPlan } from "@/lib/api";
 import { StudyPlan } from "@/components/prep/study-plan";
 import { GroundedChat } from "@/components/prep/grounded-chat";
 import { Flashcards } from "@/components/prep/flashcards";
@@ -36,6 +38,16 @@ export default async function PrepPage() {
 
   // Weak areas come from the last interview's scorecard (sample offline).
   const weakAreas = SAMPLE_SCORECARD.weak_competencies;
+
+  // Build the real study plan from the scorecard via the coach agent. Falls back
+  // to the StudyPlan component's sample modules if the agent is unreachable.
+  let studyModules: StudyModule[] | undefined;
+  try {
+    const plan = await requestCoachPlan(SAMPLE_SCORECARD);
+    if (plan.modules.length > 0) studyModules = plan.modules;
+  } catch {
+    // Agent down / offline dev — StudyPlan renders its default sample modules.
+  }
 
   return (
     <main className="mx-auto max-w-[1100px] px-6 py-12">
@@ -84,7 +96,7 @@ export default async function PrepPage() {
 
       {/* Study plan + grounded chat side by side on wide screens */}
       <section className="mt-10 grid gap-8 lg:grid-cols-[1.15fr_1fr]">
-        <StudyPlan weakAreas={weakAreas} />
+        <StudyPlan modules={studyModules} weakAreas={weakAreas} />
         <GroundedChat />
       </section>
 
