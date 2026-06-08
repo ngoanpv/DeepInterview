@@ -1,10 +1,13 @@
 import {
   PrepResponseSchema,
   ScoreResponseSchema,
+  StudyPlanSchema,
   type PrepRequest,
   type PrepResponse,
+  type ScoreCard,
   type ScoreRequest,
   type ScoreResponse,
+  type StudyPlan,
 } from "@deepinterview/shared";
 import { serverEnv } from "@/lib/env";
 
@@ -40,4 +43,9 @@ export function requestPrep(body: PrepRequest): Promise<PrepResponse> {
 /** Score a completed interview session. */
 export function requestScore(body: ScoreRequest): Promise<ScoreResponse> {
   return postJson("/api/score", body, (d) => ScoreResponseSchema.parse(d));
+}
+
+/** Build a Study Coach plan from a scorecard's weak competencies (server-side). */
+export function requestCoachPlan(scorecard: ScoreCard): Promise<StudyPlan> {
+  return postJson("/api/coach/plan", { scorecard }, (d) => StudyPlanSchema.parse(d));
 }

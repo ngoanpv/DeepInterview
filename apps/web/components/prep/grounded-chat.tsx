@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/cn";
-import { queryKnowledge, type Citation } from "@/lib/kb";
+import { askCoach, type Citation } from "@/lib/coach";
 
 interface ChatTurn {
   id: string;
@@ -66,7 +66,7 @@ export function GroundedChat() {
     setLoading(true);
 
     try {
-      const res = await queryKnowledge(q, "en");
+      const res = await askCoach(q, "en");
       setTurns((prev) => [
         ...prev,
         {
