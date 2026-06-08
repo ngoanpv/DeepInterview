@@ -1,0 +1,59 @@
+[project]
+name = "deepinterview-agent"
+version = "0.0.0"
+description = "DeepInterview live voice interviewer + prep/post pipelines (WP-0 shell)."
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.13",
+    "fastapi>=0.136",
+    "uvicorn>=0.49",
+    "httpx>=0.28",
+    "pydantic-settings>=2.14",
+    "langgraph>=1.2",
+    "langchain-core>=1.4",
+]
+
+[project.optional-dependencies]
+gemini = ["google-genai>=2.8"]
+openai = ["openai>=2.41"]
+supabase = ["supabase>=2.31"]
+tavily = ["tavily-python>=0.7"]
+# Live voice loop (WP-5) — heavy; install with: uv sync --extra livekit.
+# livekit-agents 1.5.x + the cascaded STT->LLM->TTS plugin set the worker needs:
+#   silero (VAD) · deepgram (STT) · cartesia (TTS) · google (Gemini live LLM) · openai.
+livekit = [
+    "livekit-agents>=1.5",
+    "livekit-plugins-silero>=1.5",
+    "livekit-plugins-deepgram>=1.5",
+    "livekit-plugins-cartesia>=1.5",
+    "livekit-plugins-google>=1.5",
+    "livekit-plugins-openai>=1.5",
+]
+# Observability (WP-12) — gated tracing/error reporting. NOT installed by
+# default; core/observability.py no-ops without these. Enable with:
+#   uv sync --extra observability   (then set SENTRY_DSN / LANGFUSE_* keys)
+observability = [
+    "sentry-sdk>=2.62",
+    "langfuse>=4.7",
+]
+
+[dependency-groups]
+dev = ["pytest>=9", "ruff>=0.15"]
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/deepinterview_agent"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]

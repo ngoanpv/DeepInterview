@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "fluency_score": {
+      "type": "number"
+    },
+    "filler_word_count": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "clarity_score": {
+      "type": "number"
+    },
+    "code_switching_notes": {
+      "type": "string"
+    },
+    "pronunciation_notes": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "fluency_score",
+    "filler_word_count",
+    "clarity_score",
+    "code_switching_notes",
+    "pronunciation_notes",
+    "summary"
+  ]
+}

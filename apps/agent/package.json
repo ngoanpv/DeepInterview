@@ -1,0 +1,9 @@
+{
+  "name": "@deepinterview/agent",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "test": "uv run pytest -q",
+    "lint": "uv run ruff check ."
+  }
+}

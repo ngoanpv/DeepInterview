@@ -1,0 +1,670 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "session_id": {
+      "type": "string"
+    },
+    "candidate": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "headline": {
+          "type": "string"
+        },
+        "summary_120w": {
+          "type": "string"
+        },
+        "years_experience": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "seniority": {
+          "type": "string",
+          "enum": [
+            "intern",
+            "junior",
+            "mid",
+            "senior",
+            "staff",
+            "principal"
+          ]
+        },
+        "skills": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "projects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "tech": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "name",
+              "description",
+              "tech"
+            ]
+          }
+        },
+        "achievements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "education": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "institution": {
+                "type": "string"
+              },
+              "degree": {
+                "type": "string"
+              },
+              "field": {
+                "default": null,
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "year": {
+                "default": null,
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "institution",
+              "degree"
+            ]
+          }
+        },
+        "spoken_languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "links": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "headline",
+        "summary_120w",
+        "years_experience",
+        "seniority",
+        "skills",
+        "projects",
+        "achievements",
+        "education",
+        "spoken_languages"
+      ]
+    },
+    "job": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "company_name": {
+          "type": "string"
+        },
+        "location": {
+          "default": null,
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "seniority": {
+          "type": "string",
+          "enum": [
+            "intern",
+            "junior",
+            "mid",
+            "senior",
+            "staff",
+            "principal"
+          ]
+        },
+        "must_have": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "nice_to_have": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "responsibilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tech_stack": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "raw_text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "company_name",
+        "seniority",
+        "must_have",
+        "nice_to_have",
+        "responsibilities",
+        "tech_stack",
+        "raw_text"
+      ]
+    },
+    "company": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "industry": {
+          "default": null,
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tech_stack": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "interview_process": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recent_news": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "citations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "snippet": {
+                "default": null,
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "title",
+              "url"
+            ]
+          }
+        }
+      },
+      "required": [
+        "name",
+        "summary",
+        "tech_stack",
+        "values",
+        "interview_process",
+        "recent_news",
+        "citations"
+      ]
+    },
+    "gap": {
+      "type": "object",
+      "properties": {
+        "strengths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "probe_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "matched_skills": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "missing_skills": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "strengths",
+        "gaps",
+        "probe_targets",
+        "matched_skills",
+        "missing_skills",
+        "summary"
+      ]
+    },
+    "plan": {
+      "type": "object",
+      "properties": {
+        "sections_order": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "intro",
+              "behavioral",
+              "technical",
+              "coding",
+              "wrap"
+            ]
+          }
+        },
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "section": {
+                "type": "string",
+                "enum": [
+                  "intro",
+                  "behavioral",
+                  "technical",
+                  "coding",
+                  "wrap"
+                ]
+              },
+              "text": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "difficulty": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "rubric": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "criterion": {
+                      "type": "string"
+                    },
+                    "weight": {
+                      "type": "number"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "criterion",
+                    "weight",
+                    "description"
+                  ]
+                }
+              },
+              "followups": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "target_competency": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "section",
+              "text",
+              "difficulty",
+              "rubric",
+              "followups",
+              "target_competency"
+            ]
+          }
+        },
+        "time_budget_min": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "language_mode": {
+          "type": "object",
+          "properties": {
+            "primary": {
+              "type": "string",
+              "enum": [
+                "en",
+                "vi",
+                "es",
+                "zh",
+                "hi",
+                "id",
+                "pt",
+                "fr",
+                "de",
+                "ja"
+              ]
+            },
+            "mixed": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "primary",
+            "mixed"
+          ]
+        }
+      },
+      "required": [
+        "sections_order",
+        "questions",
+        "time_budget_min",
+        "language_mode"
+      ]
+    },
+    "cursor": {
+      "default": 0,
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "answers": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question_id": {
+            "type": "string"
+          },
+          "transcript": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": "string"
+          },
+          "ended_at": {
+            "type": "string"
+          },
+          "duration_sec": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "followups_asked": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "question_id",
+          "transcript",
+          "started_at",
+          "ended_at"
+        ]
+      }
+    },
+    "scorecard": {
+      "default": null,
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "overall_score": {
+              "type": "number"
+            },
+            "competency_scores": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "competency": {
+                    "type": "string"
+                  },
+                  "score": {
+                    "type": "number"
+                  },
+                  "evidence": {
+                    "type": "string"
+                  },
+                  "level": {
+                    "type": "string",
+                    "enum": [
+                      "weak",
+                      "developing",
+                      "solid",
+                      "strong"
+                    ]
+                  }
+                },
+                "required": [
+                  "competency",
+                  "score",
+                  "evidence",
+                  "level"
+                ]
+              }
+            },
+            "strengths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "weaknesses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "weak_competencies": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "model_answers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "question_id": {
+                    "type": "string"
+                  },
+                  "answer": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "question_id",
+                  "answer"
+                ]
+              }
+            },
+            "next_steps": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "language_report": {
+              "type": "object",
+              "properties": {
+                "fluency_score": {
+                  "type": "number"
+                },
+                "filler_word_count": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "clarity_score": {
+                  "type": "number"
+                },
+                "code_switching_notes": {
+                  "type": "string"
+                },
+                "pronunciation_notes": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fluency_score",
+                "filler_word_count",
+                "clarity_score",
+                "code_switching_notes",
+                "pronunciation_notes",
+                "summary"
+              ]
+            },
+            "summary": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "overall_score",
+            "competency_scores",
+            "strengths",
+            "weaknesses",
+            "weak_competencies",
+            "model_answers",
+            "next_steps",
+            "language_report",
+            "summary"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "session_id",
+    "candidate",
+    "job",
+    "company",
+    "gap",
+    "plan"
+  ]
+}

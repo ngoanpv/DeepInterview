@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "competency": {
+      "type": "string"
+    },
+    "score": {
+      "type": "number"
+    },
+    "evidence": {
+      "type": "string"
+    },
+    "level": {
+      "type": "string",
+      "enum": [
+        "weak",
+        "developing",
+        "solid",
+        "strong"
+      ]
+    }
+  },
+  "required": [
+    "competency",
+    "score",
+    "evidence",
+    "level"
+  ]
+}

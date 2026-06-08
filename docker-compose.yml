@@ -1,0 +1,115 @@
+name: deepinterview
+
+# WP-12 full stack. `docker compose up` brings up the base stack: web +
+# agent-api + lightrag (all run offline on mock providers / naive RAG with no
+# keys). The live voice worker needs the `livekit` extra + LiveKit/STT/TTS keys,
+# so it is gated behind the `live` profile:  `docker compose --profile live up`.
+#
+# `docker compose config -q` validates this file in CI (ci.yml).
+# Healthchecks use the in-image runtime (node / python) — slim images ship
+# neither curl nor wget.
+
+services:
+  lightrag:
+    build: ./services/lightrag
+    ports:
+      - "9621:9621"
+    env_file:
+      - path: .env
+        required: false
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:9621/health').status==200 else 1)
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  agent-api:
+    build:
+      context: .
+      dockerfile: apps/agent/Dockerfile
+    command:
+      - uv
+      - run
+      - uvicorn
+      - deepinterview_agent.app:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      lightrag:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  # Live voice loop (WP-5). Reuses the agent image but runs the worker module,
+  # which imports livekit.agents at load time — so this REQUIRES an image built
+  # with `--extra livekit` plus LIVEKIT_*/STT/TTS/LLM keys in .env. Gated behind
+  # the `live` profile so it does not block the base stack.
+  agent-worker:
+    build:
+      context: .
+      dockerfile: apps/agent/Dockerfile
+    profiles:
+      - live
+    command:
+      - uv
+      - run
+      - python
+      - -m
+      - deepinterview_agent.worker
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      agent-api:
+        condition: service_started
+      lightrag:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      agent-api:
+        condition: service_started
+      lightrag:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - require('http').get('http://localhost:3000/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped

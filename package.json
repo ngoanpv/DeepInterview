@@ -1,0 +1,24 @@
+{
+  "name": "deepinterview",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Open-source (AGPLv3), voice-first AI mock-interview platform. English-first, multilingual.",
+  "license": "AGPL-3.0-only",
+  "packageManager": "pnpm@11.5.2",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "gen:schema": "turbo run gen:schema",
+    "dev": "turbo run dev",
+    "lint": "prettier --check \"apps/**/*.{ts,tsx}\" \"cli/src/**/*.ts\" \"packages/shared/src/**/*.ts\" \"packages/shared/scripts/**/*.mts\" \"packages/shared/test/**/*.ts\" && pnpm --filter @deepinterview/agent run lint",
+    "format": "prettier --write \"apps/**/*.{ts,tsx}\" \"cli/src/**/*.ts\" \"packages/shared/src/**/*.ts\" \"packages/shared/scripts/**/*.mts\" \"packages/shared/test/**/*.ts\"",
+    "deepinterview": "node cli/dist/index.js"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  }
+}

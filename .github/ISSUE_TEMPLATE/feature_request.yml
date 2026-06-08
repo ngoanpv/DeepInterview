@@ -1,0 +1,78 @@
+name: Feature request
+description: Suggest an idea, enhancement, or new capability.
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! Please search
+        [existing issues and Discussions](https://github.com/deepinterview/deepinterview/issues)
+        first — there may already be a thread.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What problem are you trying to solve? What's painful or missing today?
+      placeholder: "As a candidate practicing in Vietnamese, I can't ... because ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like to happen? Describe the behavior or API you'd expect.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area / work package
+      description: Which part of the system would this touch? See `AI-Interviewer-Build-Handoff.md` §16.
+      options:
+        - "WP-1 — Web: auth + setup/onboarding"
+        - "WP-2 — Web: live interview screen"
+        - "WP-3 — Web: report / feedback screen"
+        - "WP-4 — Web: Prep Coach UI"
+        - "WP-5 — Agent: live voice interviewer"
+        - "WP-6 — Agent: prep pipeline"
+        - "WP-7 — Agent: scoring pipeline"
+        - "WP-8 — Knowledge service (LightRAG)"
+        - "WP-9 — Avatar system"
+        - "WP-10 — Skill library + distiller"
+        - "WP-11 — Payments + plan gating"
+        - "WP-12 — DevOps / deploy / observability"
+        - "WP-13 — OSS launch assets / docs"
+        - "Cross-cutting (i18n, shared contracts, adapters, a11y)"
+        - "Other / not sure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you thought about, and why the proposal above is better.
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Mockups, links, related issues, or anything else that helps.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and Discussions and this is not a duplicate.
+          required: true
+        - label: This is a feature request, not a bug report or a support question.
+          required: true

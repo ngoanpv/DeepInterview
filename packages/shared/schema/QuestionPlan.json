@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "sections_order": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "intro",
+          "behavioral",
+          "technical",
+          "coding",
+          "wrap"
+        ]
+      }
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "section": {
+            "type": "string",
+            "enum": [
+              "intro",
+              "behavioral",
+              "technical",
+              "coding",
+              "wrap"
+            ]
+          },
+          "text": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "difficulty": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "rubric": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "criterion": {
+                  "type": "string"
+                },
+                "weight": {
+                  "type": "number"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "criterion",
+                "weight",
+                "description"
+              ]
+            }
+          },
+          "followups": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "target_competency": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "section",
+          "text",
+          "difficulty",
+          "rubric",
+          "followups",
+          "target_competency"
+        ]
+      }
+    },
+    "time_budget_min": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "language_mode": {
+      "type": "object",
+      "properties": {
+        "primary": {
+          "type": "string",
+          "enum": [
+            "en",
+            "vi",
+            "es",
+            "zh",
+            "hi",
+            "id",
+            "pt",
+            "fr",
+            "de",
+            "ja"
+          ]
+        },
+        "mixed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "primary",
+        "mixed"
+      ]
+    }
+  },
+  "required": [
+    "sections_order",
+    "questions",
+    "time_budget_min",
+    "language_mode"
+  ]
+}

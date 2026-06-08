@@ -1,0 +1,32 @@
+<svg width="140" height="140" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DeepInterview">
+  <title>DeepInterview</title>
+  <!-- Editorial mark: a rounded square plate with a serif "Di" and a hairline
+       voice-loop arc. Brand: paper plate, deep-indigo accent (#4338CA),
+       Fraunces-style serif glyph. Matches landing-page.html's mark. -->
+  <defs>
+    <clipPath id="plate">
+      <rect x="6" y="6" width="128" height="128" rx="30" />
+    </clipPath>
+  </defs>
+
+  <!-- plate -->
+  <rect x="6" y="6" width="128" height="128" rx="30" fill="#FBF9F4" />
+  <rect x="6.75" y="6.75" width="126.5" height="126.5" rx="29.25" fill="none" stroke="#1A1A1A" stroke-width="1.5" />
+
+  <g clip-path="url(#plate)">
+    <!-- voice loop: a thin indigo arc sweeping under the glyph, the prep -> live -> feedback loop -->
+    <path d="M28 96 a42 42 0 0 0 84 0" fill="none" stroke="#4338CA" stroke-width="2.5" stroke-linecap="round" opacity="0.9" />
+    <!-- loop endpoint dots -->
+    <circle cx="28" cy="96" r="3.5" fill="#4338CA" />
+    <circle cx="112" cy="96" r="3.5" fill="#4338CA" />
+
+    <!-- serif "Di" wordmark glyph -->
+    <text x="70" y="78" text-anchor="middle"
+          font-family="Fraunces, Georgia, 'Times New Roman', serif"
+          font-size="62" font-weight="600" font-style="italic"
+          letter-spacing="-1" fill="#1A1A1A">Di</text>
+
+    <!-- a small indigo "speaking" tick above the i, hints at the live mic -->
+    <circle cx="89" cy="36" r="3.2" fill="#4338CA" />
+  </g>
+</svg>

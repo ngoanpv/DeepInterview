@@ -1,0 +1,32 @@
+{
+  "name": "@deepinterview/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist", "schema", "fixtures"],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "gen:schema": "tsx scripts/gen-schema.mts"
+  },
+  "dependencies": { "zod": "^4.0.0" },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.5",
+    "@types/node": "^22.10.2",
+    "zod-to-json-schema": "^3.24.1"
+  }
+}
