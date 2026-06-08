@@ -10,6 +10,7 @@ import * as P from "./primitives";
 import * as Q from "./question";
 import * as R from "./room";
 import * as S from "./score";
+import * as Coach from "./coach";
 
 export const SCHEMAS: Record<string, ZodType> = {
   Project: C.ProjectSchema,
@@ -28,6 +29,10 @@ export const SCHEMAS: Record<string, ZodType> = {
   LanguageReport: S.LanguageReportSchema,
   ModelAnswer: S.ModelAnswerSchema,
   ScoreCard: S.ScoreCardSchema,
+  StudyModule: Coach.StudyModuleSchema,
+  StudyPlan: Coach.StudyPlanSchema,
+  CoachChatRequest: Coach.CoachChatRequestSchema,
+  CoachReply: Coach.CoachReplySchema,
   InterviewContext: I.InterviewContextSchema,
   TokenRequest: R.TokenRequestSchema,
   TokenResponse: R.TokenResponseSchema,
