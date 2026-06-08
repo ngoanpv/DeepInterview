@@ -107,6 +107,18 @@ class Interviewer(Agent):
         return f"Moving to {q.section}: {text}"
 
     @function_tool
+    async def get_difficulty_hint(
+        self, context: RunContext[InterviewUserdata]
+    ) -> str:
+        """Advisory hint on whether to go harder/easier, advance, or wrap.
+
+        OPTIONAL and non-binding: consult it only if you're unsure how to pace the
+        current section. It is computed locally from answers already given (no
+        network, no blocking) and never changes the question cursor.
+        """
+        return state.difficulty_hint(context.userdata)
+
+    @function_tool
     async def request_clarification(
         self, context: RunContext[InterviewUserdata], reason: str = ""
     ) -> str:

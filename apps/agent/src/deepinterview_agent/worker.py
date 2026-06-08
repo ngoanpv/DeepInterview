@@ -165,7 +165,9 @@ async def entrypoint(ctx: JobContext) -> None:
         preemptive_generation=True,
     )
 
-    director = Director(userdata)
+    director = Director(
+        userdata, enable_adaptive=settings.enable_adaptive_difficulty
+    )
     director.start()
 
     async def _on_shutdown() -> None:
