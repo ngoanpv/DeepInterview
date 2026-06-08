@@ -25,3 +25,9 @@ __pycache__/
 # OS / editor
 .DS_Store
 *.log
+
+# Enterprise (commercial license) — kept out of the OSS repo
+ee/
+
+# Product spec / internal design docs (kept local, not published)
+site/
