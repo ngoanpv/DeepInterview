@@ -68,6 +68,13 @@ class Settings(BaseSettings):
     agent_api_port: int = 8000
     default_language: str = "en"
 
+    # --- feature flags -------------------------------------------------------
+    # Voice Study Coach: when true, the spoken coach worker (worker_coach.py)
+    # wires the grounded knowledge-base function tool into the live session.
+    # OFF by default so the default config stays fully offline and the coach
+    # turn path stays lean. Override: ENABLE_COACH_KB=true.
+    enable_coach_kb: bool = False
+
     # --- live: adaptive interview (off the turn-critical path) ----------------
     # When on, the background Director caches an advisory difficulty
     # recommendation and the interviewer exposes a get_difficulty_hint tool. The

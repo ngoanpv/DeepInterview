@@ -35,3 +35,25 @@ def coach_chat_prompts(query: str, grounded_context: str, lang: str) -> tuple[st
         f"(use if relevant, ignore if not):\n{grounded_context or '(no grounded notes found)'}\n"
     )
     return system, user
+
+
+def coach_agent_instructions(weak_areas_summary: str, lang: str) -> str:
+    """Lean system prompt for the SPOKEN Study Coach persona (live voice loop).
+
+    Kept livekit-free here (like the other prompt builders) so the persona text
+    is unit-testable without the ``livekit`` extra; ``live/coach_agent.py`` wraps
+    it into a :class:`~livekit.agents.Agent`. The compact ``weak_areas_summary``
+    is injected verbatim so the live prompt stays lean (no full scorecard).
+    """
+    return (
+        "You are a warm, supportive interview-prep coach running a real-time "
+        "SPOKEN coaching session. Speak naturally and concisely.\n\n"
+        f"{weak_areas_summary}\n\n"
+        f"Primary language: {lang}. Coach in this language.\n\n"
+        "Coach Socratically: ask one focused question at a time to draw out the "
+        "candidate's thinking before you explain. Give a hint or a worked example "
+        "only after they have tried, and never lecture at length. When grounding "
+        "is useful, call search_knowledge_base to pull the candidate's prep notes, "
+        "then teach from them. Keep momentum: pick the weakest area first, confirm "
+        "understanding, then move on. Never read a rubric or score aloud."
+    )

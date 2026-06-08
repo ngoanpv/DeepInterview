@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Literal
 from ..shared_models import AnswerRecord
 
 if TYPE_CHECKING:
-    from ..shared_models import InterviewContext, PlannedQuestion, Section
+    from ..shared_models import InterviewContext, PlannedQuestion, ScoreCard, Section
 
 # A directional hint the live model MAY consider when adapting question depth.
 # Purely advisory: nothing here moves the cursor or mutates interview state.
@@ -271,3 +271,24 @@ def compact_summary(ud: InterviewUserdata) -> str:
         f"Interviewing for: {role}. "
         f"{cand.summary_120w}"
     )
+
+
+def weak_areas_summary(scorecard: ScoreCard | None) -> str:
+    """A short, spoken-coach-friendly summary of the candidate's weak areas.
+
+    Pure + livekit-free (testable) so the coach worker can inject a lean context
+    line into the live coach prompt. Returns an encouraging fallback when the
+    session has not been scored yet, or has no flagged weaknesses.
+    """
+    if scorecard is None:
+        return (
+            "No scorecard yet for this session. Ask the candidate which area they "
+            "want to work on and coach from there."
+        )
+    weak = list(scorecard.weak_competencies)
+    if not weak:
+        return (
+            "No specific weak areas from the last interview. Reinforce strengths "
+            "and run a quick refresher on the candidate's chosen topic."
+        )
+    return "Focus areas from the last interview (weakest first): " + ", ".join(weak) + "."
