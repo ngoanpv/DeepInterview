@@ -75,6 +75,15 @@ class Settings(BaseSettings):
     # offline suite are unchanged. Override via ENABLE_ADAPTIVE_DIFFICULTY.
     enable_adaptive_difficulty: bool = False
 
+    # --- post: adversarial score verifier (off the turn-critical path) --------
+    # When on, the post scoring pipeline runs a second, adversarial LLM pass over
+    # low/borderline competency scores to catch over- or under-scoring; any
+    # failure leaves the original scores untouched. Default OFF so the offline
+    # suite and existing scorecards are unchanged. Override via
+    # ENABLE_SCORE_VERIFIER / SCORE_VERIFIER_TIMEOUT_SEC.
+    enable_score_verifier: bool = False
+    score_verifier_timeout_sec: float = 60.0
+
 
 @lru_cache
 def get_settings() -> Settings:
