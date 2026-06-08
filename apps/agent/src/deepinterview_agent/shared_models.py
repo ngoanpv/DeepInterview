@@ -205,6 +205,43 @@ class ScoreCard(BaseModel):
     summary: str
 
 
+# --- coach (WP-4 study coach) ------------------------------------------------
+
+
+MasteryState = Literal["unseen", "learning", "shaky", "mastered"]
+
+
+class StudyModule(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str
+    title: str
+    competency: str
+    status: MasteryState
+    est_min: int
+    rationale: str
+
+
+class StudyPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    modules: list[StudyModule]
+    summary: str
+    total_min: int
+
+
+class CoachChatRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_id: str
+    query: str
+    lang: Language
+
+
+class CoachReply(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    answer: str
+    citations: list[Citation]
+    follow_ups: list[str]
+
+
 # --- interview context -------------------------------------------------------
 
 
@@ -313,6 +350,10 @@ MODELS: dict[str, type[BaseModel]] = {
     "LanguageReport": LanguageReport,
     "ModelAnswer": ModelAnswer,
     "ScoreCard": ScoreCard,
+    "StudyModule": StudyModule,
+    "StudyPlan": StudyPlan,
+    "CoachChatRequest": CoachChatRequest,
+    "CoachReply": CoachReply,
     "InterviewContext": InterviewContext,
     "TokenRequest": TokenRequest,
     "TokenResponse": TokenResponse,

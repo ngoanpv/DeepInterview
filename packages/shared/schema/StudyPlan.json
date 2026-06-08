@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "competency": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "unseen",
+              "learning",
+              "shaky",
+              "mastered"
+            ]
+          },
+          "est_min": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "rationale": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "competency",
+          "status",
+          "est_min",
+          "rationale"
+        ]
+      }
+    },
+    "summary": {
+      "type": "string"
+    },
+    "total_min": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "modules",
+    "summary",
+    "total_min"
+  ]
+}

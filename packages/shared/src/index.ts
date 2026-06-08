@@ -6,6 +6,7 @@ export * from "./gap";
 export * from "./question";
 export * from "./answer";
 export * from "./score";
+export * from "./coach";
 export * from "./interview-context";
 export * from "./room";
 export * from "./api";
