@@ -17,12 +17,25 @@ the clock or uses randomness, so it is fully reproducible in tests.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from ..shared_models import AnswerRecord
 
 if TYPE_CHECKING:
     from ..shared_models import InterviewContext, PlannedQuestion, Section
+
+# A directional hint the live model MAY consider when adapting question depth.
+# Purely advisory: nothing here moves the cursor or mutates interview state.
+Recommendation = Literal["harder", "easier", "advance", "wrap"]
+
+# Deterministic answer-substance thresholds (word counts of the saved answer
+# transcript). Mid-call we have no rubric scores yet, so substance is the
+# strongest reproducible signal of how the candidate is coping with the section.
+_THIN_WORDS = 12
+_RICH_WORDS = 80
+# Planned difficulty is on the documented 1-5 band; only suggest "harder" when
+# there is a higher rung left to climb to.
+_MAX_DIFFICULTY = 5
 
 
 @dataclass
@@ -113,6 +126,134 @@ def next_section(ud: InterviewUserdata) -> PlannedQuestion | None:
 def add_turn(ud: InterviewUserdata, role: str, text: str) -> None:
     """Append a turn to the flat running transcript log."""
     ud.transcript.append({"role": role, "text": text})
+
+
+# --- adaptive difficulty (pure, livekit-free, deterministic) -----------------
+
+
+@dataclass(frozen=True)
+class DifficultySignal:
+    """An advisory read of how the candidate is doing in the *current* section.
+
+    Fully derived from the plan + cursor + answer log; never mutates anything.
+    ``recommendation`` is the directional hint; ``rationale`` is a short, lean
+    string suitable for handing to the live model.
+    """
+
+    recommendation: Recommendation
+    section: Section | None
+    answered_in_section: int
+    section_size: int
+    avg_answer_words: float
+    current_difficulty: int
+    rationale: str
+
+
+def _answers_by_question_id(ud: InterviewUserdata) -> dict[str, AnswerRecord]:
+    """Last saved answer per question id (later answers win)."""
+    by_id: dict[str, AnswerRecord] = {}
+    for a in ud.ctx.answers:
+        by_id[a.question_id] = a
+    return by_id
+
+
+def _word_count(text: str) -> int:
+    return len(text.split())
+
+
+def evaluate_difficulty(ud: InterviewUserdata) -> DifficultySignal:
+    """Recommend a difficulty move for the current section. PURE + deterministic.
+
+    Reads only ``ud.ctx.plan.questions``, ``ud.ctx.cursor`` and ``ud.ctx.answers``
+    — it NEVER touches the cursor or appends anything. The heuristic looks at the
+    answers already given within the *current* section and compares their average
+    substance (word count) against fixed thresholds:
+
+    * past the end, or in the terminal ``wrap`` section  -> ``"wrap"``
+    * no answers in the section yet                      -> ``"advance"`` (neutral)
+    * thin answers                                       -> ``"easier"``
+    * rich answers with a higher difficulty rung left    -> ``"harder"``
+    * otherwise (section solidly covered / maxed out)    -> ``"advance"``
+    """
+    section = current_section(ud)
+    if section is None or section == "wrap":
+        return DifficultySignal(
+            recommendation="wrap",
+            section=section,
+            answered_in_section=0,
+            section_size=0,
+            avg_answer_words=0.0,
+            current_difficulty=0,
+            rationale=(
+                "Past the planned questions — wrap up."
+                if section is None
+                else "In the wrap section — bring the interview to a close."
+            ),
+        )
+
+    questions = ud.ctx.plan.questions
+    section_qs = [q for q in questions if q.section == section]
+    section_size = len(section_qs)
+    by_id = _answers_by_question_id(ud)
+    answered = [
+        by_id[q.id] for q in section_qs if q.id in by_id
+    ]
+    answered_in_section = len(answered)
+
+    current = current_question(ud)
+    current_difficulty = current.difficulty if current is not None else 0
+
+    if answered_in_section == 0:
+        # No evidence yet this section; keep the interview on plan.
+        return DifficultySignal(
+            recommendation="advance",
+            section=section,
+            answered_in_section=0,
+            section_size=section_size,
+            avg_answer_words=0.0,
+            current_difficulty=current_difficulty,
+            rationale=(
+                f"No answers yet in the {section} section — proceed as planned."
+            ),
+        )
+
+    total_words = sum(_word_count(a.transcript) for a in answered)
+    avg_words = total_words / answered_in_section
+
+    if avg_words < _THIN_WORDS:
+        rec: Recommendation = "easier"
+        rationale = (
+            f"Answers in the {section} section are thin "
+            f"(~{avg_words:.0f} words) — ease off and ask something more concrete."
+        )
+    elif avg_words > _RICH_WORDS and current_difficulty < _MAX_DIFFICULTY:
+        rec = "harder"
+        rationale = (
+            f"Answers in the {section} section are strong "
+            f"(~{avg_words:.0f} words) — push to a harder, deeper question."
+        )
+    else:
+        rec = "advance"
+        rationale = (
+            f"The {section} section is well covered "
+            f"({answered_in_section}/{section_size} answered) — move on."
+        )
+
+    return DifficultySignal(
+        recommendation=rec,
+        section=section,
+        answered_in_section=answered_in_section,
+        section_size=section_size,
+        avg_answer_words=avg_words,
+        current_difficulty=current_difficulty,
+        rationale=rationale,
+    )
+
+
+def difficulty_hint(ud: InterviewUserdata) -> str:
+    """A lean one-line hint string for the live model: ``"<rec>: <rationale>"``."""
+    sig = evaluate_difficulty(ud)
+    return f"{sig.recommendation}: {sig.rationale}"
 
 
 def compact_summary(ud: InterviewUserdata) -> str:

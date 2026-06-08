@@ -19,19 +19,37 @@ import contextlib
 
 from ..core.logging import get_logger
 from . import state
-from .state import InterviewUserdata
+from .state import InterviewUserdata, Recommendation
 
 log = get_logger(__name__)
 
 
 class Director:
-    """Observes plan coverage in the background; never blocks a turn."""
+    """Observes plan coverage in the background; never blocks a turn.
 
-    def __init__(self, userdata: InterviewUserdata, *, interval_sec: float = 5.0) -> None:
+    When ``enable_adaptive`` is set it ALSO caches an advisory difficulty
+    ``recommendation``/``rationale`` each tick (computed by the pure
+    :func:`state.evaluate_difficulty`). This is read-only w.r.t. the turn cursor
+    and purely observational — the live model consults the same pure function via
+    a tool; the cache here is for logging/observability. Defaults OFF so existing
+    call sites (``Director(userdata)``) and tests are unaffected.
+    """
+
+    def __init__(
+        self,
+        userdata: InterviewUserdata,
+        *,
+        interval_sec: float = 5.0,
+        enable_adaptive: bool = False,
+    ) -> None:
         self._ud = userdata
         self._interval = interval_sec
+        self._enable_adaptive = enable_adaptive
         self._task: asyncio.Task[None] | None = None
         self.coverage: float = 0.0
+        # Advisory adaptive signal; populated only when enable_adaptive is True.
+        self.recommendation: Recommendation | None = None
+        self.rationale: str = ""
 
     def start(self) -> None:
         """Launch the watcher as a detached background task."""
@@ -63,6 +81,15 @@ class Director:
                     len(self._ud.ctx.plan.questions),
                     state.current_section(self._ud),
                 )
+                if self._enable_adaptive:
+                    sig = state.evaluate_difficulty(self._ud)
+                    self.recommendation = sig.recommendation
+                    self.rationale = sig.rationale
+                    log.info(
+                        "director: adaptive recommendation=%s (%s)",
+                        sig.recommendation,
+                        sig.rationale,
+                    )
                 await asyncio.sleep(self._interval)
             self.coverage = 1.0
             log.info("director: interview plan fully covered")

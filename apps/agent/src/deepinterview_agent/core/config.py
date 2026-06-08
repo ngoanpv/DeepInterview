@@ -68,6 +68,13 @@ class Settings(BaseSettings):
     agent_api_port: int = 8000
     default_language: str = "en"
 
+    # --- live: adaptive interview (off the turn-critical path) ----------------
+    # When on, the background Director caches an advisory difficulty
+    # recommendation and the interviewer exposes a get_difficulty_hint tool. The
+    # turn path never blocks on it. Default OFF so the lean live loop and the
+    # offline suite are unchanged. Override via ENABLE_ADAPTIVE_DIFFICULTY.
+    enable_adaptive_difficulty: bool = False
+
 
 @lru_cache
 def get_settings() -> Settings:
