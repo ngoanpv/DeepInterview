@@ -29,6 +29,7 @@ from .core.config import get_settings
 from .core.deps import build_deps
 from .core.logging import get_logger
 from .live.director import Director
+from .live.guard import SessionGuard
 from .live.interviewer import Interviewer
 from .live.state import InterviewUserdata
 from .shared_models import InterviewContext, RoomMetadata, ScoreRequest
@@ -168,7 +169,18 @@ async def entrypoint(ctx: JobContext) -> None:
     director = Director(userdata)
     director.start()
 
+    # Hard in-room cost/duration backstop (Golden Rule #5): ends the session if
+    # it runs past the configured ceilings, independent of the web-layer cap on
+    # interview creation. Started after the session is live (see below).
+    guard = SessionGuard(
+        session,
+        userdata,
+        max_duration_sec=settings.max_interview_duration_sec,
+        max_turns=settings.max_interview_turns,
+    )
+
     async def _on_shutdown() -> None:
+        await guard.aclose()
         await director.aclose()
         # Persist whatever was captured, best-effort, off the turn path.
         try:
@@ -192,6 +204,10 @@ async def entrypoint(ctx: JobContext) -> None:
         agent=Interviewer(userdata),
         room=ctx.room,
     )
+
+    # Start the guard only once the session is live (it calls session.say /
+    # session.shutdown); it runs detached until a ceiling trips or shutdown.
+    guard.start()
 
 
 def main() -> None:

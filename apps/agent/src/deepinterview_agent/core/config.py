@@ -62,6 +62,24 @@ class Settings(BaseSettings):
     agent_api_port: int = 8000
     default_language: str = "en"
 
+    # --- live cost / duration guard (Golden Rule #5: cap voice in code) -------
+    # Hard ceilings enforced by the worker's SessionGuard so a live room can
+    # never run unbounded (a stalled/looping LLM would otherwise burn voice
+    # minutes forever). These are the in-code per-tier caps; a per-session
+    # override can later be threaded in via RoomMetadata.
+    max_interview_duration_sec: int = 1200  # 20 min wall-clock hard stop
+    max_interview_turns: int = 80  # transcript turns hard stop
+
+    # --- post / scoring resilience -------------------------------------------
+    # Per-stage timeout for the (latency-tolerant) scoring pipeline; on timeout
+    # or error the stage degrades to a valid fallback instead of failing the
+    # whole scorecard. See post/__init__.py.
+    score_stage_timeout_sec: float = 60.0
+    # Closed-loop skill distiller (WP-10): when enabled, a scored interview
+    # proposes a playbook delta into the review queue. OFF by default so tests
+    # and local runs don't write drafts; enable in production via env.
+    enable_skill_distiller: bool = False
+
 
 @lru_cache
 def get_settings() -> Settings:
