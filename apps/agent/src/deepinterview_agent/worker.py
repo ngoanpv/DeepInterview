@@ -31,7 +31,7 @@ from .core.logging import get_logger
 from .live.director import Director
 from .live.interviewer import Interviewer
 from .live.state import InterviewUserdata
-from .shared_models import RoomMetadata, ScoreRequest
+from .shared_models import InterviewContext, RoomMetadata, ScoreRequest
 
 log = get_logger(__name__)
 
@@ -110,6 +110,33 @@ def _session_id_from_room(ctx: JobContext) -> str:
     return ctx.room.name
 
 
+async def _load_context_via_api(session_id: str, settings) -> InterviewContext | None:  # noqa: ANN001
+    """Fetch the prepped InterviewContext from the prep API over HTTP.
+
+    The worker runs in a SEPARATE process from the API (``cli.run_app`` spawns its
+    own job process), so the in-memory repo is not shared. Read the context from
+    the API's ``GET /api/session/{id}`` SessionView instead. (With Supabase
+    configured both processes share the store and either path works.)
+    """
+    import httpx  # noqa: PLC0415
+
+    url = f"http://localhost:{settings.agent_api_port}/api/session/{session_id}"
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url)
+    except Exception:  # noqa: BLE001
+        log.exception("worker: failed to reach %s", url)
+        return None
+    if resp.status_code != 200:
+        log.error("worker: GET %s -> %s", url, resp.status_code)
+        return None
+    ctx_data = resp.json().get("context")
+    if not ctx_data:
+        log.error("worker: session %s has no ready context", session_id)
+        return None
+    return InterviewContext.model_validate(ctx_data)
+
+
 # --- entrypoint --------------------------------------------------------------
 
 
@@ -120,7 +147,7 @@ async def entrypoint(ctx: JobContext) -> None:
     await ctx.connect()
     session_id = _session_id_from_room(ctx)
 
-    interview_ctx = await deps.repo.load_context(session_id)
+    interview_ctx = await _load_context_via_api(session_id, settings)
     if interview_ctx is None:
         log.error("worker: no InterviewContext for session %s; aborting", session_id)
         return
@@ -168,7 +195,17 @@ async def entrypoint(ctx: JobContext) -> None:
 
 
 def main() -> None:
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
+    # livekit-agents reads LIVEKIT_URL/API_KEY/API_SECRET from os.environ; we keep
+    # them in Settings (.env), so pass them through explicitly to WorkerOptions.
+    settings = get_settings()
+    cli.run_app(
+        WorkerOptions(
+            entrypoint_fnc=entrypoint,
+            ws_url=settings.livekit_url,
+            api_key=settings.livekit_api_key,
+            api_secret=settings.livekit_api_secret,
+        )
+    )
 
 
 if __name__ == "__main__":

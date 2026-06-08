@@ -5,7 +5,9 @@
   "description": "Open-source (AGPLv3), voice-first AI mock-interview platform. English-first, multilingual.",
   "license": "AGPL-3.0-only",
   "packageManager": "pnpm@11.5.2",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
@@ -17,8 +19,8 @@
     "deepinterview": "node cli/dist/index.js"
   },
   "devDependencies": {
-    "prettier": "^3.4.2",
-    "turbo": "^2.3.3",
-    "typescript": "^5.7.2"
+    "prettier": "^3.8.3",
+    "turbo": "^2.9.16",
+    "typescript": "^6.0.3"
   }
 }

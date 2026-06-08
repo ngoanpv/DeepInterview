@@ -58,7 +58,7 @@ export function CompetencyChart({
             dot={{ r: 2.5, fill: ACCENT, strokeWidth: 0 }}
           />
           <Tooltip
-            formatter={(value: number | string) => [`${value} / 5`, "Score"]}
+            formatter={(value) => [`${value} / 5`, "Score"]}
             contentStyle={{
               borderRadius: 10,
               border: `1px solid ${LINE}`,
