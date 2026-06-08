@@ -29,7 +29,11 @@ class Settings(BaseSettings):
     #                       Flash (has "thinking"); verified for structured output.
     #   gemini_model_live = the real-time interviewer — lowest-latency flash-lite.
     gemini_model: str = "gemini-3-flash-preview"
-    gemini_model_live: str = "gemini-flash-lite-latest"
+    # Live tier MUST be a Gemini 2.x model: the live loop uses function tools, and
+    # Gemini 3 requires "thought_signatures" in function-call turns that
+    # livekit-plugins-google 1.5.x does not thread yet (-> 400 INVALID_ARGUMENT).
+    # 2.5-flash-lite is low-latency and function-calls cleanly. Override: GEMINI_MODEL_LIVE.
+    gemini_model_live: str = "gemini-2.5-flash-lite"
     # 2026-current OpenAI default. UNVERIFIED — no OpenAI key in this env; re-verify
     # the exact id + structured-output support before wiring billing (CLAUDE.md
     # golden rule #6). Env-overridable via OPENAI_MODEL.

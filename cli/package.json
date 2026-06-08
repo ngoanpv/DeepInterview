@@ -3,16 +3,22 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "bin": { "deepinterview": "./dist/index.js" },
-  "files": ["dist"],
+  "bin": {
+    "deepinterview": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": { "@deepinterview/shared": "workspace:*" },
+  "dependencies": {
+    "@deepinterview/shared": "workspace:*"
+  },
   "devDependencies": {
-    "@types/node": "^22.10.2",
-    "tsup": "^8.3.5",
-    "typescript": "^5.7.2"
+    "@types/node": "^25.9.2",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3"
   }
 }
