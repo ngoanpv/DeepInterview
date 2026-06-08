@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 from .adapters.base import EmbeddingsAdapter, LLMAdapter, SearchAdapter
 from .adapters.embeddings import get_embeddings
+from .adapters.knowledge import KnowledgeClient, get_knowledge
 from .adapters.llm import get_llm
 from .adapters.search import get_search
 from .config import Settings, get_settings
@@ -22,6 +23,7 @@ class Deps:
     llm: LLMAdapter
     search: SearchAdapter
     embeddings: EmbeddingsAdapter
+    knowledge: KnowledgeClient
     repo: SessionRepository
 
 
@@ -33,5 +35,6 @@ def build_deps(settings: Settings | None = None) -> Deps:
         llm=get_llm(settings),
         search=get_search(settings),
         embeddings=get_embeddings(settings),
+        knowledge=get_knowledge(settings),
         repo=get_repository(settings),
     )
