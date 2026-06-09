@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     # livekit-plugins-google 1.5.x does not thread yet (-> 400 INVALID_ARGUMENT).
     # 2.5-flash-lite is low-latency and function-calls cleanly. Override: GEMINI_MODEL_LIVE.
     gemini_model_live: str = "gemini-2.5-flash-lite"
+    # Gemini native TTS — the fallback voice for languages Cartesia doesn't cover
+    # (e.g. Vietnamese). gemini-2.5-flash-preview-tts speaks 24 languages incl.
+    # vi-VN. Override via GEMINI_TTS_MODEL when a newer TTS model ships.
+    gemini_tts_model: str = "gemini-2.5-flash-preview-tts"
     # 2026-current OpenAI default. UNVERIFIED — no OpenAI key in this env; re-verify
     # the exact id + structured-output support before wiring billing (CLAUDE.md
     # golden rule #6). Env-overridable via OPENAI_MODEL.
