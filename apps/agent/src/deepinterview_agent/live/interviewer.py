@@ -60,6 +60,37 @@ class Interviewer(Agent):
     def __init__(self, userdata: InterviewUserdata) -> None:
         super().__init__(instructions=build_instructions(userdata))
 
+    async def on_enter(self) -> None:
+        """Open the interview proactively: greet the candidate and ask Q1.
+
+        LiveKit calls this when the agent becomes the active speaker. Without it
+        the agent stays silent until the candidate speaks first (the avatar sits
+        on its idle loop). We drive the first turn with ``generate_reply``
+        (synchronous in livekit-agents 1.x — returns a SpeechHandle) using the
+        lean context already in the system prompt; subsequent turns flow through
+        the tools. Persona handoffs subclass ``Agent`` directly, so this opener
+        fires once, only for the base interviewer.
+        """
+        ud = self.session.userdata
+        primary = ud.ctx.plan.language_mode.primary
+        q = state.current_question(ud)
+        question_line = (
+            _localized(q.text, primary) if q is not None else "(no further questions)"
+        )
+        if q is not None:
+            state.add_turn(ud, "assistant", question_line)
+        first_name = (ud.ctx.candidate.name or "there").split()[0]
+        self.session.generate_reply(
+            instructions=(
+                f"Open the interview now, speaking in {primary}. Warmly greet the "
+                f"candidate by first name ({first_name}) in one short sentence and "
+                f"say you'll be running their mock interview for the {ud.ctx.job.title} "
+                f"role at {ud.ctx.job.company_name}. Then ask this first question and "
+                f"stop: {question_line}. Keep it natural and concise; do not call any "
+                "tools yet."
+            )
+        )
+
     @function_tool
     async def save_answer(
         self,
