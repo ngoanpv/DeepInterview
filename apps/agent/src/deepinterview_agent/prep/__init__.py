@@ -55,8 +55,10 @@ async def run_prep_for_session(
     designed to run as a fire-and-forget background task.
     """
     try:
-        # Resolve the CV document first so validation can judge real content.
-        fetched = await fetch_cv({"req": req}, deps)
+        # Parse the CV document first so validation judges the EXTRACTED text
+        # (real prose from a PDF/DOCX), not the data:/URL pointer or raw bytes.
+        # Pass session_id so any "couldn't read the CV" warning is persisted.
+        fetched = await fetch_cv({"req": req, "session_id": session_id}, deps)
         cv_text = fetched.get("cv_text", req.cv_url)
 
         ok, warnings = validate_prep_inputs(req, cv_text=cv_text)

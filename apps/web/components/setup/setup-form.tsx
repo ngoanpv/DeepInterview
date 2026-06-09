@@ -99,6 +99,20 @@ export function SetupForm({ r2Configured }: { r2Configured: boolean }) {
     if (dropped) setFile(dropped);
   }, []);
 
+  /**
+   * Read a file as a base64 `data:` URL of its RAW bytes (no R2 configured).
+   * The agent base64-decodes this and parses the real document (PDF/DOCX) —
+   * unlike `file.text()`, which mangles binary formats into garbage.
+   */
+  function fileToDataUrl(f: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error ?? new Error("Could not read file."));
+      reader.readAsDataURL(f);
+    });
+  }
+
   /** Upload the chosen file to R2 (presign → PUT) and return its public URL. */
   async function uploadToR2(f: File): Promise<string> {
     const res = await fetch("/api/upload", {
@@ -148,8 +162,10 @@ export function SetupForm({ r2Configured }: { r2Configured: boolean }) {
       } else if (cvText.trim()) {
         cv_url = cvText.trim();
       } else if (file) {
-        // File chosen but no storage — fall back to reading it as text.
-        cv_url = await file.text();
+        // File chosen but no storage — send the RAW bytes as a base64 data URL
+        // so the agent can parse the real document (NOT file.text(), which
+        // turns a PDF/DOCX into binary garbage).
+        cv_url = await fileToDataUrl(file);
       } else {
         cv_url = "";
       }
