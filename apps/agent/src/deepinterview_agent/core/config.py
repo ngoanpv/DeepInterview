@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     # the exact id + structured-output support before wiring billing (CLAUDE.md
     # golden rule #6). Env-overridable via OPENAI_MODEL.
     openai_model: str = "gpt-5.1-mini"
+    # ElevenLabs TTS model — the low-latency multilingual voice for languages
+    # Cartesia can't speak (e.g. Vietnamese). eleven_flash_v2_5 is ~75ms-latency
+    # and covers 32 languages incl. vi. Override via ELEVENLABS_MODEL.
+    elevenlabs_model: str = "eleven_flash_v2_5"
 
     # --- provider credentials (all optional) ---------------------------------
     gemini_api_key: str | None = None
