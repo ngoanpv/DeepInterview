@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for the idea! Please search
-        [existing issues and Discussions](https://github.com/deepinterview/deepinterview/issues)
+        [existing issues and Discussions](https://github.com/ngoanpv/DeepInterview/issues)
         first — there may already be a thread.
 
   - type: textarea

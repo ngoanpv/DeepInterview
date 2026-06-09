@@ -94,6 +94,10 @@ services:
       dockerfile: apps/web/Dockerfile
     ports:
       - "3000:3000"
+    environment:
+      # Reach the agent over the compose network (overrides the .env localhost
+      # default, which would resolve to the web container itself).
+      - AGENT_API_URL=http://agent-api:8000
     env_file:
       - path: .env
         required: false

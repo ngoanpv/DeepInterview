@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: 💬 Questions & Discussions
-    url: https://github.com/deepinterview/deepinterview/discussions
+    url: https://github.com/ngoanpv/DeepInterview/discussions
     about: Ask questions, share ideas, and get help. Please use Discussions for usage questions instead of opening an issue.
   - name: 🗨️ Community chat (Discord)
     url: https://discord.gg/deepinterview
     about: Chat with the community in real time. (Placeholder invite — update once the server is live.)
   - name: 🔒 Report a security vulnerability
-    url: https://github.com/deepinterview/deepinterview/blob/main/SECURITY.md
+    url: https://github.com/ngoanpv/DeepInterview/blob/main/SECURITY.md
     about: Do not file security issues publicly. Email security@deepinterview.dev — see our security policy.
