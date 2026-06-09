@@ -16,7 +16,10 @@ from ..shared_models import InterviewContext
 
 __all__ = ["SessionView", "SessionStatus", "PROGRESS_STEPS"]
 
-SessionStatus = Literal["prep", "ready", "rejected", "error"]
+# "complete" is the terminal state set by the post-interview scoring step
+# (see post/__init__.py); it must be a valid status or GET /api/session/{id}
+# 500s on any read after an interview ends, blocking re-joins.
+SessionStatus = Literal["prep", "ready", "rejected", "error", "complete"]
 
 # The canonical ordered set of prep steps a session progresses through. Reported
 # back as completed-step keys (a subset/permutation of these) in SessionView.

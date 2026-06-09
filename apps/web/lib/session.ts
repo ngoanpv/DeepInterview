@@ -11,7 +11,7 @@ import { InterviewContextSchema } from "@deepinterview/shared";
  */
 export const SessionViewSchema = z.object({
   session_id: z.string(),
-  status: z.enum(["prep", "ready", "rejected", "error"]),
+  status: z.enum(["prep", "ready", "rejected", "error", "complete"]),
   progress: z.array(z.string()),
   prep_warnings: z.array(z.string()),
   context: InterviewContextSchema.nullable(),
