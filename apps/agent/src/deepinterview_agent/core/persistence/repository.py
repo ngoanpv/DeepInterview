@@ -138,12 +138,16 @@ class MemoryRepository:
         context = (
             InterviewContext.model_validate(row.context) if row.context else None
         )
+        scorecard = (
+            ScoreCard.model_validate(row.scorecard) if row.scorecard else None
+        )
         return SessionView(
             session_id=row.id,
             status=row.status,
             progress=list(row.progress),
             prep_warnings=list(row.warnings),
             context=context,
+            scorecard=scorecard,
         )
 
     # --- test / inspection helpers (not part of the protocol) ----------------
@@ -264,7 +268,7 @@ class SupabaseRepository:
         def _build() -> Any:
             return (
                 self._table()
-                .select("id,status,progress,prep_warnings,context")
+                .select("id,status,progress,prep_warnings,context,scorecard")
                 .eq("id", session_id)
                 .limit(1)
                 .execute()
@@ -277,12 +281,15 @@ class SupabaseRepository:
         row = rows[0]
         ctx_data = row.get("context")
         context = InterviewContext.model_validate(ctx_data) if ctx_data else None
+        sc_data = row.get("scorecard")
+        scorecard = ScoreCard.model_validate(sc_data) if sc_data else None
         return SessionView(
             session_id=row["id"],
             status=row.get("status", "prep"),
             progress=list(row.get("progress") or []),
             prep_warnings=list(row.get("prep_warnings") or []),
             context=context,
+            scorecard=scorecard,
         )
 
     async def _update(self, session_id: str, values: dict[str, Any]) -> None:

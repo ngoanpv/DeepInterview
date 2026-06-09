@@ -1,13 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import {
-  ScoreCardSchema,
-  InterviewContextSchema,
-  type ScoreCard,
-  type InterviewContext,
-} from "@deepinterview/shared";
-import { isSupabaseConfigured } from "@/lib/env";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { type ScoreCard, type InterviewContext } from "@deepinterview/shared";
+import { serverEnv } from "@/lib/env";
+import { SessionViewSchema } from "@/lib/session";
 import { SAMPLE_SCORECARD, SAMPLE_INTERVIEW } from "@/lib/sample-scorecard";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +23,7 @@ import {
   type TranscriptTurn,
 } from "@/components/report/transcript-section";
 
-// Reads server-only config and a per-request DB row; never prerender.
+// Reads server-only config and calls the agent API per request; never prerender.
 export const dynamic = "force-dynamic";
 
 interface Loaded {
@@ -42,10 +36,11 @@ interface Loaded {
 }
 
 /**
- * Resolve the scorecard for this session. When Supabase is configured we fetch
- * the `sessions` row and zod-parse `row.scorecard` (+ `row.context` for the
- * transcript); on any miss — unconfigured, no row, bad shape — we fall back to
- * the sample so the report always renders (offline-safe).
+ * Resolve the scorecard for this session by reading the agent API
+ * (`GET /api/session/{id}` → SessionView, which carries `scorecard` + `context`).
+ * No Supabase / RLS / auth on the read path, so OSS works without sign-in. On
+ * any miss — agent down, not scored yet, bad shape — we fall back to the sample
+ * so the report always renders.
  */
 async function load(id: string): Promise<Loaded> {
   const fallback: Loaded = {
@@ -56,32 +51,32 @@ async function load(id: string): Promise<Loaded> {
     role: SAMPLE_INTERVIEW.role,
   };
 
-  if (!isSupabaseConfigured()) return fallback;
+  // Read the scorecard through the agent API (which owns persistence) — no
+  // Supabase / RLS / auth on the read path, so OSS works without sign-in. Any
+  // miss (agent down, not scored yet, bad shape) falls back to the sample.
+  try {
+    const res = await fetch(
+      `${serverEnv.agentApiUrl}/api/session/${encodeURIComponent(id)}`,
+      { cache: "no-store", signal: AbortSignal.timeout(15_000) },
+    );
+    if (!res.ok) return fallback;
 
-  const supabase = await createClient();
-  if (!supabase) return fallback;
+    const parsed = SessionViewSchema.safeParse(await res.json());
+    if (!parsed.success) return fallback;
 
-  const { data, error } = await supabase
-    .from("sessions")
-    .select("scorecard, context, company")
-    .eq("id", id)
-    .maybeSingle();
+    const view = parsed.data;
+    if (!view.scorecard) return fallback;
 
-  if (error || !data) return fallback;
-
-  const parsed = ScoreCardSchema.safeParse(data.scorecard);
-  if (!parsed.success) return fallback;
-
-  const ctxParsed = InterviewContextSchema.safeParse(data.context);
-  const context = ctxParsed.success ? ctxParsed.data : null;
-
-  return {
-    scorecard: parsed.data,
-    context,
-    isSample: false,
-    company: context?.job.company_name ?? data.company ?? null,
-    role: context?.job.title ?? null,
-  };
+    return {
+      scorecard: view.scorecard,
+      context: view.context,
+      isSample: false,
+      company: view.context?.job.company_name ?? null,
+      role: view.context?.job.title ?? null,
+    };
+  } catch {
+    return fallback;
+  }
 }
 
 /** Build the question-text lookup + ordered transcript turns. */
@@ -130,12 +125,8 @@ export default async function ReportPage({
 }) {
   const { id } = await params;
 
-  // Page-level auth: gate only when Supabase is wired up; offline we proceed.
-  if (isSupabaseConfigured()) {
-    const user = await getUser();
-    if (!user) redirect("/login");
-  }
-
+  // No auth gate: OSS reads the report through the agent API, which needs no
+  // sign-in. (Hosted/multi-tenant deployments add auth as a separate layer.)
   const loaded = await load(id);
   const { scorecard } = loaded;
   const { questionText, turns } = buildTranscript(loaded);

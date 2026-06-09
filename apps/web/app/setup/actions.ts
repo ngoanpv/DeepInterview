@@ -39,12 +39,14 @@ export async function startSession(
   let profile: ProfileBilling | null = null;
 
   if (configured) {
+    // OSS runs without sign-in: an anonymous user proceeds with no billing /
+    // gating. A signed-in user (hosted) still gets the metered cap enforced
+    // below — `supabase` stays null when anonymous, so that block is skipped.
     const user = await getUser();
-    if (!user) {
-      return { ok: false, error: "Please sign in to start an interview." };
+    if (user) {
+      userId = user.id;
+      supabase = await createClient();
     }
-    userId = user.id;
-    supabase = await createClient();
 
     // Load the billing-relevant profile row and roll the monthly period if due.
     if (supabase) {
