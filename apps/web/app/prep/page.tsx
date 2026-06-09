@@ -1,8 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { RefreshCw, ArrowRight } from "lucide-react";
-import { isSupabaseConfigured } from "@/lib/env";
-import { getUser } from "@/lib/supabase/server";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -30,12 +27,7 @@ export const dynamic = "force-dynamic";
  * content so the page renders fully with zero env keys.
  */
 export default async function PrepPage() {
-  // Page-level auth: gate only when Supabase is wired up; offline we proceed.
-  if (isSupabaseConfigured()) {
-    const user = await getUser();
-    if (!user) redirect("/login");
-  }
-
+  // No auth gate — OSS runs without sign-in.
   // Weak areas come from the last interview's scorecard (sample offline).
   const weakAreas = SAMPLE_SCORECARD.weak_competencies;
 

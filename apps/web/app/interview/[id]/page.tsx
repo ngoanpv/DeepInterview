@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { isLiveKitConfigured, isSupabaseConfigured } from "@/lib/env";
 import { getUser } from "@/lib/supabase/server";
 import { createInterviewToken } from "@/lib/livekit";
@@ -31,14 +30,17 @@ export default async function InterviewPage({
   let identity = `dev-${id}`;
   let name: string | undefined;
 
+  // No auth gate (OSS): an anonymous visitor joins with a session-scoped dev
+  // identity. When a user IS signed in (hosted) we use their real identity.
   if (isSupabaseConfigured()) {
     const user = await getUser();
-    if (!user) redirect("/login");
-    identity = user.id;
-    name =
-      (user.user_metadata?.name as string | undefined) ??
-      user.email ??
-      undefined;
+    if (user) {
+      identity = user.id;
+      name =
+        (user.user_metadata?.name as string | undefined) ??
+        user.email ??
+        undefined;
+    }
   }
 
   const persona = getPersona(personaId);
