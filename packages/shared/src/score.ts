@@ -35,5 +35,10 @@ export const ScoreCardSchema = z.object({
   next_steps: z.array(z.string()),
   language_report: LanguageReportSchema,
   summary: z.string(),
+  // Fraction of planned questions actually answered (0.0-1.0). Unanswered
+  // questions are excluded from overall_score and weak_competencies; this lets
+  // consumers tell a short/aborted interview apart from genuinely weak answers.
+  // Defaults to 1.0 for scorecards persisted before this field existed.
+  coverage_pct: z.number().default(1.0),
 });
 export type ScoreCard = z.infer<typeof ScoreCardSchema>;
