@@ -18,6 +18,7 @@ import {
  */
 export const SAMPLE_SCORECARD: ScoreCard = {
   overall_score: 3.6,
+  coverage_pct: 1.0,
   competency_scores: [
     {
       competency: "Communication",

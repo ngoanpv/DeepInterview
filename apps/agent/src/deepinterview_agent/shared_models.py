@@ -203,6 +203,12 @@ class ScoreCard(BaseModel):
     next_steps: list[str]
     language_report: LanguageReport
     summary: str
+    # Fraction of planned questions actually answered (0.0-1.0). Lets consumers
+    # distinguish a low score caused by a short/aborted interview from genuinely
+    # weak answers; unanswered questions are excluded from overall_score and
+    # weak_competencies. Defaults to 1.0 for backward compatibility with
+    # scorecards persisted before this field existed.
+    coverage_pct: float = 1.0
 
 
 # --- coach (WP-4 study coach) ------------------------------------------------

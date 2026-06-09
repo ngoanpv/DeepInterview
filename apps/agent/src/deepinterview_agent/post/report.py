@@ -57,6 +57,21 @@ def _weak_competencies(comp_scores: list[CompetencyScore]) -> list[str]:
     return weak
 
 
+def _coverage_pct(ctx: InterviewContext) -> float:
+    """Fraction of planned questions that received a non-empty answer.
+
+    1.0 when nothing was planned (vacuously complete). This is the signal that
+    tells a low ``overall_score`` from a short/aborted interview apart from one
+    earned by genuinely weak answers.
+    """
+    total = len(ctx.plan.questions)
+    if total == 0:
+        return 1.0
+    answered_ids = {a.question_id for a in ctx.answers if a.transcript and a.transcript.strip()}
+    answered = sum(1 for q in ctx.plan.questions if q.id in answered_ids)
+    return answered / total
+
+
 def _competency_lines(comp_scores: list[CompetencyScore]) -> str:
     if not comp_scores:
         return "- (no competencies scored)"
@@ -102,4 +117,5 @@ async def generate_report(
         next_steps=narrative.next_steps,
         language_report=lang_report,
         summary=narrative.summary,
+        coverage_pct=_coverage_pct(ctx),
     )

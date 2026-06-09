@@ -108,12 +108,17 @@ async def evaluate(ctx: InterviewContext, deps: Deps) -> list[CompetencyScore]:
 
     Each ``CompetencyScore.competency`` equals the corresponding question's
     ``target_competency`` — the mapping the report and the Prep Coach loop rely
-    on. Questions without a matching answer are scored low with non-evidence
-    text rather than dropped.
+    on. Questions that were never answered (no record, or an empty transcript)
+    are SKIPPED rather than scored ``0.0``: a competency we never probed must
+    not read as a weak one (that would poison ``overall_score`` and tell the
+    Prep Coach to teach something the interview simply didn't reach). The
+    fraction actually covered is reported separately as ``ScoreCard.coverage_pct``.
     """
     by_question = _answers_by_question(ctx)
     raw_scores: list[CompetencyScore] = []
     for question in ctx.plan.questions:
         answer = by_question.get(question.id)
+        if answer is None or not (answer.transcript and answer.transcript.strip()):
+            continue  # unanswered: not assessable — see ScoreCard.coverage_pct
         raw_scores.append(await _score_question(question, answer, deps))
     return _merge_by_competency(raw_scores)
