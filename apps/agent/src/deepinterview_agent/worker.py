@@ -88,9 +88,29 @@ def build_llm(settings):  # noqa: ANN001, ANN201
     return openai.LLM()
 
 
+# Languages Cartesia sonic speaks. Notably EXCLUDES Vietnamese — anything not in
+# this set falls back to Gemini TTS (gemini-2.5-flash-preview-tts covers 24
+# languages incl. vi-VN) when a Gemini key is available.
+_CARTESIA_LANGS = {"en", "es", "fr", "de", "ja", "zh", "pt", "hi", "it", "ko", "nl", "pl", "ru", "sv", "tr"}
+
+
 def build_tts(settings, language="en"):  # noqa: ANN001, ANN201
     lang = _TTS_LANG.get(language, "en")
     provider = settings.tts_provider
+
+    # An explicit ElevenLabs choice (multilingual) wins. Otherwise, for a
+    # language Cartesia can't speak (e.g. Vietnamese), fall back to Gemini TTS
+    # when a Gemini key is present — so vi is actually spoken, not mispronounced.
+    if (
+        provider != "elevenlabs"
+        and language not in _CARTESIA_LANGS
+        and settings.gemini_api_key
+    ):
+        from livekit.plugins.google.beta import GeminiTTS  # noqa: PLC0415
+
+        log.info("build_tts: %r unsupported by Cartesia; using Gemini TTS", language)
+        return GeminiTTS(model=settings.gemini_tts_model, api_key=settings.gemini_api_key)
+
     if provider == "cartesia" and settings.cartesia_api_key:
         from livekit.plugins import cartesia  # noqa: PLC0415
 
