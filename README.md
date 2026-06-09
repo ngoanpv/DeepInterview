@@ -14,8 +14,6 @@
 [![pnpm](https://img.shields.io/badge/pnpm-workspace-4338CA.svg)](pnpm-workspace.yaml)
 [![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](#-community)
 
-**🇺🇸 English** · [🇻🇳 Tiếng Việt](README.vi.md)
-
 **🌐 UI shipped in English + Tiếng Việt · voice interviews in 10+ languages (incl. Vietnamese, end-to-end) · no sign-in required to self-host**
 
 [Why](#-why-deepinterview) · [Features](#-features) · [Quickstart](#-quickstart) · [Architecture](#️-architecture) · [Community](#-community) · [Contributing](#-contributing)
