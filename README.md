@@ -14,7 +14,7 @@
 [![pnpm](https://img.shields.io/badge/pnpm-workspace-4338CA.svg)](pnpm-workspace.yaml)
 [![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](#-community)
 
-**🌐 UI shipped in English + Tiếng Việt · voice interviews in 10+ languages (incl. Vietnamese, end-to-end) · no sign-in required to self-host**
+**🌐 UI in English + Tiếng Việt · voice interviews in 7 languages incl. Vietnamese (more as packs land) · no sign-in required to self-host**
 
 [Why](#-why-deepinterview) · [Features](#-features) · [Quickstart](#-quickstart) · [Architecture](#️-architecture) · [Community](#-community) · [Contributing](#-contributing)
 
@@ -36,7 +36,7 @@ DeepInterview closes the **prep ⇄ interview ⇄ feedback** loop: heavy reasoni
 
 ## 🤔 Why DeepInterview
 
-Most interview-prep tools are either chat-only, closed-source, or a per-minute SaaS you can't run yourself. DeepInterview is built differently: it's **voice-first** (you practice out loud, like the real thing), **multilingual end-to-end** (UI in EN+VI, voice in 10+ languages including Vietnamese), and **fully self-hostable** under AGPLv3 with your own provider keys — and it **runs anonymously**: no account, no login, no data leaving your box unless you choose a provider.
+Most interview-prep tools are either chat-only, closed-source, or a per-minute SaaS you can't run yourself. DeepInterview is built differently: it's **voice-first** (you practice out loud, like the real thing), **multilingual** (UI in EN+VI, voice in 7 languages including Vietnamese), and **fully self-hostable** under AGPLv3 with your own provider keys — and it **runs anonymously**: no account, no login, no data leaving your box unless you choose a provider.
 
 | | **DeepInterview** | Final Round AI | Interview Coder | Generic chat prep |
 |---|:---:|:---:|:---:|:---:|
@@ -69,7 +69,7 @@ No tagged release yet — DeepInterview is pre-`v0.1`. Watch [Releases](https://
 - **🧠 Personalized prep** — a LangGraph pipeline reads your CV + the JD, researches the target company, diffs the gap, and a **Question Planner** precomputes the plan, difficulty curve, rubrics, and seeded follow-ups — so the live loop stays fast. Uploaded **CV documents (PDF/DOCX) are parsed to text server-side with [Microsoft markitdown](https://github.com/microsoft/markitdown), with a Gemini multimodal fallback for scanned/image PDFs**.
 - **📊 Scored feedback** — a rubric-based evaluator + language coach write a per-competency `ScoreCard` with strengths, gaps, model answers, and next steps that map straight back to the questions you were asked.
 - **📚 Prep Coach** *(in progress)* — turns your gaps into an LLM study loop (plan → drills → Socratic chat). Grounded + cited answers are **optional**: set `LIGHTRAG_URL` (or wire a managed RAG behind the same adapter) to ground responses in your own uploaded materials; by default the coach answers honestly without fabricated citations.
-- **🎭 Cost-smart avatars** — pre-rendered **Veo 3.1** idle/speaking video loops crossfaded by agent state. Original anime / superhero / recruiter personas (no named IP), so runtime cost is **CDN-only — no per-minute avatar fees**.
+- **🎭 Cost-smart avatars** *(in progress)* — the crossfade system + persona fallbacks are built; pre-rendered **Veo 3.1** idle/speaking loops drop in as the assets land (until then it renders a calm gradient stage). Original anime / superhero / recruiter personas (no named IP), so runtime cost is **CDN-only — no per-minute avatar fees**.
 - **🔌 Provider-agnostic & self-hostable** — a clean adapter layer (LLM / search / embeddings, with a **mock adapter** for offline dev). Bring your own keys (Soniox/Deepgram, Cartesia/ElevenLabs, Gemini/GPT, or OSS faster-whisper / XTTS / Qwen3).
 - **🔓 Open source (AGPLv3)** — self-host the whole thing. Any paid/enterprise-only code is isolated under [`ee/`](ee/README.md).
 
@@ -79,7 +79,7 @@ The live voice loop is **cascaded STT → LLM → TTS** over LiveKit, with each 
 
 | Stage | Default provider(s) | Notes | OSS / offline fallback |
 |---|---|---|---|
-| **STT** | Deepgram **nova-3** | all supported languages (Soniox also supported as a BYO option) | mock adapter (faster-whisper planned) |
+| **STT** | Deepgram **nova-3** | English + many languages; Vietnamese on nova-3 is being validated. Soniox = BYO alternative. | mock adapter (faster-whisper planned) |
 | **TTS** | Cartesia **sonic** | en, es, zh, fr, de, ja, pt, hi, it, ko, nl, pl, ru, sv, tr | mock adapter (XTTS planned) |
 | **TTS** | ElevenLabs **Flash v2.5** | **Vietnamese** + other non-Cartesia languages | — |
 | **TTS** | Gemini TTS | fallback when no ElevenLabs key is set | — |
@@ -88,6 +88,8 @@ The live voice loop is **cascaded STT → LLM → TTS** over LiveKit, with each 
 ## 🚀 Quickstart
 
 > **🔓 No sign-in required.** The OSS self-host runs **anonymously** — setup, the live interview, and the report all work with **no account and no login**. (The report reads directly from the agent API.) Supabase auth + billing are a **hosted-only** layer; you don't need them to run the loop yourself.
+>
+> **⚡ Zero-upload demo:** the `/setup` screen has a one-click **Quick demo** that fills a sample CV + JD, so you can try the whole loop without uploading anything.
 
 **Requirements:** Node **20+** (22 recommended — see [`.nvmrc`](.nvmrc)) · pnpm 11 · Python 3.11+ with [uv](https://docs.astral.sh/uv/) (for the agent) · Docker (for the full stack).
 
@@ -128,7 +130,7 @@ The button deploys **`apps/web`** to Vercel. The Python **agent** is not serverl
 
 - **Keys** live in `.env` only (never committed). See [`.env.example`](.env.example) for the full list (LiveKit, Supabase, R2, STT/TTS/LLM, Tavily/Exa, payments, observability).
 - **Provider choice** is per-component: set `STT_PROVIDER`, `TTS_PROVIDER`, `LLM_PROVIDER` and the matching key. With no keys set, the agent falls back to **mock adapters** so everything still runs offline.
-- **Languages** are pluggable packs. UI strings live in `apps/web/lib/i18n/messages/` (EN + VI shipped); the question plan carries `text_en` / `text_vi` and a `language_mode`.
+- **Languages** are pluggable packs. UI strings live in `apps/web/lib/i18n/messages/` (EN + VI shipped); each planned question's `text` is a `LocalizedText` map (`text.en` / `text.vi` / …) alongside a `language_mode`.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full dev setup and the provider-adapter pattern.
 
