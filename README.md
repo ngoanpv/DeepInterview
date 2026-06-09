@@ -18,7 +18,7 @@
 
 **🌐 UI shipped in English + Tiếng Việt · voice interviews in 10+ languages (incl. Vietnamese, end-to-end) · no sign-in required to self-host**
 
-[Why](#-why-deepinterview) · [Features](#-features) · [Quickstart](#-quickstart) · [Architecture](#️-architecture) · [Roadmap](#️-roadmap) · [Community](#-community) · [Contributing](#-contributing)
+[Why](#-why-deepinterview) · [Features](#-features) · [Quickstart](#-quickstart) · [Architecture](#️-architecture) · [Community](#-community) · [Contributing](#-contributing)
 
 </div>
 
@@ -34,7 +34,7 @@
 
 DeepInterview closes the **prep ⇄ interview ⇄ feedback** loop: heavy reasoning runs *before* the call (read your CV + the JD, research the company, build an adaptive question plan), a lean real-time voice loop runs the interview, then strong models score it and route you into a study coach for your weak areas.
 
-> **Honest status:** this is an **early open build**. The contracts, prep/live/post pipelines, web screens, and CLI are implemented and **run offline with mock adapters** (no API keys, tests green). Real-time voice, web research, and video avatars need provider keys, and `docker compose up` becomes the true full-stack one-liner as DevOps (WP-12) lands. We mark what's done honestly in the [Roadmap](#️-roadmap).
+> **Honest status:** this is an **early open build**. The contracts, prep/live/post pipelines, web screens, and CLI are implemented and **run offline with mock adapters** (no API keys, tests green). Real-time voice, web research, and video avatars need provider keys, and `docker compose up` becomes the true full-stack one-liner as DevOps (WP-12) lands. We mark what's done honestly, per feature, throughout this README.
 
 ## 🤔 Why DeepInterview
 
@@ -140,35 +140,63 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full dev setup and the provider-a
 
 The spine of the system is a **prep / live / post** split (strong async models before and after the call; one lean fast model on the live turn path). All three phases thread a single shared `InterviewContext` "blackboard" — written in prep, read+appended in live, read in post.
 
+**Overview — agents & repo design:**
+
+```mermaid
+flowchart LR
+  subgraph web["apps/web — Next.js (UI · upload · token)"]
+    UI["Setup · Live room · Report · Prep Coach"]
+  end
+  subgraph agent["apps/agent — Python · LiveKit · LangGraph"]
+    direction TB
+    prep["PREP agents x5<br/>CV · JD · Company · Gap · Question Planner"]
+    live["LIVE agents x3 + Director<br/>Interviewer · Coding · Behavioral/STAR"]
+    post["POST agents x4<br/>Scorer · Language Coach · Report · Skill Distiller"]
+    coach["Prep Coach"]
+  end
+  kb["services/lightrag<br/>knowledge base"]
+  shared["packages/shared<br/>TS &lt;-&gt; Pydantic contracts"]
+  cli["cli/<br/>first-run setup"]
+  ee["ee/<br/>enterprise (commercial)"]
+  UI <--> agent
+  agent <--> kb
+  shared -.contracts.-> web
+  shared -.contracts.-> agent
 ```
-┌──────────── PREP (async · parallel · STRONG models · web tools) ────────────┐
-│  CV ─┐                                                                        │
-│  JD ─┼─►  LangGraph StateGraph (Orchestrator)         [WP-6]                  │
-│ comp ┘     ├─ fan-out ─► [CV Analysis] [JD Analysis] [Company Research·web]   │
-│            └─ join ────► [Gap/Matching] ─► [Question Planner ★]               │
-└───────────────────────────────────┬──────────────────────────────────────────┘
-                                     ▼
-                 ┌──────── InterviewContext (shared blackboard) ───────┐
-                 │ candidate · job · company · gap · QUESTION_PLAN      │  [WP-0]
-                 │ persisted in Postgres; loaded into LiveKit userdata  │
-                 └───────────────────────────┬─────────────────────────┘
-                                             ▼
-┌──────────── LIVE (realtime <800ms · ONE fast model · LiveKit) ──────────────┐
-│  AgentSession[InterviewContext]                       [WP-5]                  │
-│   STT ─► [Interviewer Agent] ──reads plan, asks, light follow-up──► TTS       │
-│                 ├─► [Coding-round Agent]   (handoff, own model/voice)         │
-│                 └─► [Behavioral/STAR Agent]                                   │
-│   <AvatarStage> crossfades Veo idle/speaking loops by agent state  [WP-9]     │
-│   Director runs in BACKGROUND — never blocks a turn                           │
-└───────────────────────────────────┬──────────────────────────────────────────┘
-                          transcript + answers appended
-                                     ▼
-┌──────────── POST (async · STRONG/reasoning models · no latency budget) ─────┐
-│  [Evaluator/Scorer] ─► [Language Coach EN/VI] ─► [Report Generator]  [WP-7]   │
-│         writes per-competency ScoreCard ─► report screen            [WP-3]    │
-│  Prep Coach re-plan (weak competencies) ◄── closes the loop         [WP-4/8]  │
-│  Skill Distiller proposes playbook/rubric deltas → review queue     [WP-10]   │
-└──────────────────────────────────────────────────────────────────────────────┘
+
+**Request flow — prep → live → post:**
+
+```mermaid
+flowchart TB
+  in["CV · JD · Company"] --> orch["LangGraph Orchestrator (WP-6)"]
+  subgraph PREP["PREP — async · parallel · strong models"]
+    orch --> cva["CV Analysis"]
+    orch --> jda["JD Analysis"]
+    orch --> cr["Company Research (web)"]
+    cva --> gap["Gap / Matching"]
+    jda --> gap
+    cr --> gap
+    gap --> qp["Question Planner (star)"]
+  end
+  qp --> ctx[("InterviewContext<br/>shared blackboard · Postgres")]
+  ctx --> stt
+  subgraph LIVE["LIVE — realtime &lt;800ms · one fast model · LiveKit (WP-5)"]
+    stt["STT"] --> intv["Interviewer Agent"]
+    intv --> tts["TTS"]
+    intv -.handoff.-> cod["Coding-round Agent"]
+    intv -.handoff.-> beh["Behavioral / STAR Agent"]
+    dir["Director — background, never blocks a turn"]
+    ava["AvatarStage · Veo loops (WP-9)"]
+  end
+  intv -->|"transcript + answers"| ctx
+  ctx --> eval
+  subgraph POST["POST — async · reasoning models (WP-7)"]
+    eval["Evaluator / Scorer"] --> lc["Language Coach EN/VI"]
+    lc --> rpt["Report Generator -> ScoreCard (WP-3)"]
+    rpt --> pc["Prep Coach re-plan (WP-4/8)"]
+    sd["Skill Distiller -> review queue (WP-10)"]
+  end
+  pc -.->|"closes the loop"| ctx
 ```
 
 **Module boundaries:** `apps/web` owns UI/auth/upload/token and knows nothing about LLM/STT/TTS · `apps/agent` owns the voice loop + prep/post pipelines + avatar render util · `services/lightrag` owns the knowledge base · `cli/` owns first-run setup · **`packages/shared` is the cross-language contract** (TS source of truth, mirrored as Pydantic). See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and the full spec in [`site/AI-Interviewer-Build-Handoff.md`](site/AI-Interviewer-Build-Handoff.md).
@@ -190,24 +218,6 @@ The spine of the system is a **prep / live / post** split (strong async models b
 | Setup | Live interview | Report |
 |---|---|---|
 | ![setup](assets/screenshot-setup.png) | ![interview](assets/screenshot-interview.png) | ![report](assets/screenshot-report.png) |
-
-## 🗺️ Roadmap
-
-The build is organized into **13 work packages (WP-0…WP-13)** across phases **P0–P6**. Phases P0–P3 are implemented and offline-verified with mock adapters; P4–P6 are scaffolded.
-
-| Phase | Work packages | What it delivers | Status |
-|---|---|---|---|
-| **P0** | WP-0 | Monorepo + shared TS↔Pydantic contracts + CLI scaffold + `docker-compose` | ✅ Built · offline-verified |
-| **P1** | WP-6, WP-5, WP-1 | Prep pipeline · live voice interviewer · setup/onboarding UI | ✅ Built · offline-verified |
-| **P2** | WP-7, WP-3, WP-9 | Scoring pipeline · report screen · Veo avatar system | ✅ Built · offline-verified |
-| **P3** | WP-8, WP-4 | Knowledge service (LightRAG) · Prep Coach UI (the loop) | ✅ Built · offline-verified |
-| **P4** | WP-13 | OSS launch assets (this README, docs, good-first-issues) | 🟡 In progress |
-| **P5** | WP-11, WP-10 | Payments + plan gating · skill library + distiller | 🟡 Scaffolded |
-| **P6** | WP-12, `ee/` | DevOps/deploy/observability · enterprise (SSO/RBAC/audit) | 🟡 Scaffolded |
-
-> "Offline-verified" means the pipeline runs end-to-end against mock adapters with tests green — **real-time voice on live providers and a hosted demo are the next milestone**, not a current claim.
-
-**Find it useful? [Give us a ⭐](https://github.com/ngoanpv/DeepInterview)** — star velocity is what gets a project discovered, and it genuinely helps.
 
 ## 🌐 Community
 
