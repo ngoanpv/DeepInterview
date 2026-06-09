@@ -56,11 +56,16 @@ def _stt_lang(language: str, mixed: bool) -> str:
 
 def build_stt(settings, language="en", mixed=False):  # noqa: ANN001, ANN201 - livekit plugin types optional
     lang = _stt_lang(language, mixed)
+    # Deepgram now lists Vietnamese on nova-3 (lower WER than nova-2), so we use
+    # nova-3 for all languages. If a non-English language returns NO transcripts
+    # in streaming (nova-3 vi may be batch-only), revert the non-en branch to:
+    #     model = "nova-3" if lang in ("en", "multi") else "nova-2"
+    model = "nova-3"
     provider = settings.stt_provider
     if provider == "deepgram" and settings.deepgram_api_key:
         from livekit.plugins import deepgram  # noqa: PLC0415
 
-        return deepgram.STT(api_key=settings.deepgram_api_key, language=lang)
+        return deepgram.STT(api_key=settings.deepgram_api_key, language=lang, model=model)
     if provider == "soniox" and settings.soniox_api_key:
         from livekit.plugins import soniox  # noqa: PLC0415
 
@@ -68,7 +73,7 @@ def build_stt(settings, language="en", mixed=False):  # noqa: ANN001, ANN201 - l
     log.warning("build_stt: no configured STT provider/key; using Deepgram default")
     from livekit.plugins import deepgram  # noqa: PLC0415
 
-    return deepgram.STT(language=lang)
+    return deepgram.STT(language=lang, model=model)
 
 
 def build_llm(settings):  # noqa: ANN001, ANN201
@@ -89,37 +94,46 @@ def build_llm(settings):  # noqa: ANN001, ANN201
 
 
 # Languages Cartesia sonic speaks. Notably EXCLUDES Vietnamese — anything not in
-# this set falls back to Gemini TTS (gemini-2.5-flash-preview-tts covers 24
-# languages incl. vi-VN) when a Gemini key is available.
+# this set is routed to ElevenLabs Flash v2.5 (low-latency, speaks vi) when an
+# ElevenLabs key is set, else to Gemini native TTS as a slower last resort.
 _CARTESIA_LANGS = {"en", "es", "fr", "de", "ja", "zh", "pt", "hi", "it", "ko", "nl", "pl", "ru", "sv", "tr"}
 
 
 def build_tts(settings, language="en"):  # noqa: ANN001, ANN201
     lang = _TTS_LANG.get(language, "en")
     provider = settings.tts_provider
+    needs_non_cartesia = language not in _CARTESIA_LANGS
 
-    # An explicit ElevenLabs choice (multilingual) wins. Otherwise, for a
-    # language Cartesia can't speak (e.g. Vietnamese), fall back to Gemini TTS
-    # when a Gemini key is present — so vi is actually spoken, not mispronounced.
-    if (
-        provider != "elevenlabs"
-        and language not in _CARTESIA_LANGS
-        and settings.gemini_api_key
-    ):
+    # ElevenLabs Flash v2.5 (~75ms, 32 languages incl. vi) is the low-latency
+    # multilingual voice: it wins when explicitly selected, and it's the preferred
+    # voice for any language Cartesia can't speak (e.g. Vietnamese) — replacing the
+    # much slower Gemini native TTS, which now only serves as the vi fallback when
+    # no ElevenLabs key is configured.
+    if (provider == "elevenlabs" or needs_non_cartesia) and settings.elevenlabs_api_key:
+        from livekit.plugins import elevenlabs  # noqa: PLC0415
+
+        # "Sarah" is a free-tier-allowed default voice; the shared voice library
+        # 402s on free plans. Flash v2.5 supports per-request language enforcement
+        # — pass the ISO code so Vietnamese is pronounced as vi, not guessed.
+        return elevenlabs.TTS(
+            api_key=settings.elevenlabs_api_key,
+            model=settings.elevenlabs_model,
+            voice_id="EXAVITQu4vr4xnSDxMaL",
+            language=lang,
+        )
+
+    # No ElevenLabs key but the language is outside Cartesia's set (e.g. vi): fall
+    # back to Gemini native TTS so it is spoken correctly, just slower.
+    if needs_non_cartesia and provider != "elevenlabs" and settings.gemini_api_key:
         from livekit.plugins.google.beta import GeminiTTS  # noqa: PLC0415
 
-        log.info("build_tts: %r unsupported by Cartesia; using Gemini TTS", language)
+        log.info("build_tts: %r unsupported by Cartesia; using Gemini TTS fallback", language)
         return GeminiTTS(model=settings.gemini_tts_model, api_key=settings.gemini_api_key)
 
     if provider == "cartesia" and settings.cartesia_api_key:
         from livekit.plugins import cartesia  # noqa: PLC0415
 
         return cartesia.TTS(api_key=settings.cartesia_api_key, language=lang)
-    if provider == "elevenlabs" and settings.elevenlabs_api_key:
-        from livekit.plugins import elevenlabs  # noqa: PLC0415
-
-        # ElevenLabs' multilingual model infers the language from the text.
-        return elevenlabs.TTS(api_key=settings.elevenlabs_api_key)
     log.warning("build_tts: no configured TTS provider/key; using Cartesia default")
     from livekit.plugins import cartesia  # noqa: PLC0415
 
