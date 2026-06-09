@@ -82,7 +82,10 @@ async function load(id: string): Promise<Loaded> {
 
     // Honest empty: no answers were captured. New sessions are flagged
     // `no_answers`; legacy rows may be `complete` with a blank (score-less) card.
-    if (view.status === "no_answers" || (answers === 0 && !!view.scorecard && !hasScores)) {
+    if (
+      view.status === "no_answers" ||
+      (answers === 0 && !!view.scorecard && !hasScores)
+    ) {
       return { ...base, state: "empty", scorecard: SAMPLE_SCORECARD };
     }
     if (view.status === "error" || view.status === "rejected") {
@@ -173,7 +176,9 @@ export default async function ReportPage({
               className="h-7 w-7 animate-spin rounded-full border-2 border-accent border-t-transparent"
               aria-hidden
             />
-            <h1 className="font-serif text-2xl text-ink">Scoring your interview…</h1>
+            <h1 className="font-serif text-2xl text-ink">
+              Scoring your interview…
+            </h1>
             <p className="max-w-sm text-sm leading-relaxed text-muted">
               Hang tight — we’re analyzing your answers. This page updates
               automatically the moment your report is ready.
@@ -190,17 +195,20 @@ export default async function ReportPage({
       <StatusShell>
         <Card className="max-w-md text-center">
           <CardContent className="flex flex-col items-center gap-4 py-10">
-            <h1 className="font-serif text-2xl text-ink">No answers recorded</h1>
+            <h1 className="font-serif text-2xl text-ink">
+              No answers recorded
+            </h1>
             <p className="max-w-sm text-sm leading-relaxed text-muted">
               {loaded.role && loaded.company ? (
                 <>
-                  This {loaded.role} interview at {loaded.company} ended before any
-                  question was answered, so there’s nothing to score yet.{" "}
+                  This {loaded.role} interview at {loaded.company} ended before
+                  any question was answered, so there’s nothing to score
+                  yet.{" "}
                 </>
               ) : (
                 <>
-                  This interview ended before any question was answered, so there’s
-                  nothing to score yet.{" "}
+                  This interview ended before any question was answered, so
+                  there’s nothing to score yet.{" "}
                 </>
               )}
               Give it another go — answer out loud and we’ll build your report.

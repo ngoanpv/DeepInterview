@@ -1,23 +1,22 @@
 name: Deploy
 
-# WP-12 — gated push-to-deploy (Singapore region; see docs/DEPLOY.md).
+# WP-12 — gated deploy (Singapore region; see docs/DEPLOY.md).
 #
 # This workflow is a SKETCH wired with placeholders + comments. It is safe by
-# default: on `push` to main it only runs when the relevant secrets are present
-# (checked inside each step — note GitHub does NOT allow `secrets.*` in a
-# job/workflow-level `if:`), and the destructive deploy commands are commented
-# out so wiring them up is an explicit, reviewed choice.
+# default: the destructive deploy commands are commented out, and each step
+# gates on the relevant secrets being present (checked inside each step — note
+# GitHub does NOT allow `secrets.*` in a job/workflow-level `if:`).
 #
 # Targets:
 #   web    -> Vercel (region sin1)            — apps/web
 #   agent  -> container image -> LiveKit Cloud Agents (Singapore) / Render / Fly (sin)
 #
-# Trigger manually (workflow_dispatch) or on push to main.
+# Trigger: MANUAL ONLY (workflow_dispatch) until the deploy steps are real.
+# We intentionally do NOT run on push to main yet — an unwired deploy would
+# fail on every push. Re-add a `push:` trigger once the steps below are live.
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
 
 concurrency:
   group: deploy-${{ github.ref }}

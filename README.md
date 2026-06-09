@@ -7,16 +7,18 @@
 ### Practice the interview out loud. Then pass the real one. · English-first · Open source
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-4338CA.svg)](LICENSE)
-[![Build](https://img.shields.io/github/actions/workflow/status/your-org/deepinterview/ci.yml?branch=main&label=build)](https://github.com/your-org/deepinterview/actions)
-[![Release](https://img.shields.io/github/v/release/your-org/deepinterview?include_prereleases&label=release&color=4338CA)](https://github.com/your-org/deepinterview/releases)
-[![Stars](https://img.shields.io/github/stars/your-org/deepinterview?style=social)](https://github.com/your-org/deepinterview/stargazers)
+[![Build](https://img.shields.io/github/actions/workflow/status/ngoanpv/DeepInterview/ci.yml?branch=main&label=build)](https://github.com/ngoanpv/DeepInterview/actions)
+[![Release](https://img.shields.io/github/v/release/ngoanpv/DeepInterview?include_prereleases&label=release&color=4338CA)](https://github.com/ngoanpv/DeepInterview/releases)
+[![Stars](https://img.shields.io/github/stars/ngoanpv/DeepInterview?style=social)](https://github.com/ngoanpv/DeepInterview/stargazers)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-4338CA.svg)](apps/agent)
 [![pnpm](https://img.shields.io/badge/pnpm-workspace-4338CA.svg)](pnpm-workspace.yaml)
 [![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](#-community)
 
 **🇺🇸 English** · [🇻🇳 Tiếng Việt](README.vi.md)
 
-[Features](#-features) · [Quickstart](#-quickstart) · [Architecture](#️-architecture) · [Roadmap](#️-roadmap) · [Community](#-community) · [Contributing](#-contributing)
+**🌐 UI shipped in English + Tiếng Việt · voice interviews in 10+ languages (incl. Vietnamese, end-to-end) · no sign-in required to self-host**
+
+[Why](#-why-deepinterview) · [Features](#-features) · [Quickstart](#-quickstart) · [Architecture](#️-architecture) · [Roadmap](#️-roadmap) · [Community](#-community) · [Contributing](#-contributing)
 
 </div>
 
@@ -34,6 +36,22 @@ DeepInterview closes the **prep ⇄ interview ⇄ feedback** loop: heavy reasoni
 
 > **Honest status:** this is an **early open build**. The contracts, prep/live/post pipelines, web screens, and CLI are implemented and **run offline with mock adapters** (no API keys, tests green). Real-time voice, web research, and video avatars need provider keys, and `docker compose up` becomes the true full-stack one-liner as DevOps (WP-12) lands. We mark what's done honestly in the [Roadmap](#️-roadmap).
 
+## 🤔 Why DeepInterview
+
+Most interview-prep tools are either chat-only, closed-source, or a per-minute SaaS you can't run yourself. DeepInterview is built differently: it's **voice-first** (you practice out loud, like the real thing), **multilingual end-to-end** (UI in EN+VI, voice in 10+ languages including Vietnamese), and **fully self-hostable** under AGPLv3 with your own provider keys — and it **runs anonymously**: no account, no login, no data leaving your box unless you choose a provider.
+
+| | **DeepInterview** | Final Round AI | Interview Coder | Generic chat prep |
+|---|:---:|:---:|:---:|:---:|
+| Real-time **voice** interview | ✅ | ✅ | ❌ (coding-overlay) | ❌ (text) |
+| **Multilingual** (incl. Vietnamese) | ✅ | partial | ❌ | varies |
+| **Self-hostable** | ✅ | ❌ | ❌ | ❌ |
+| **Bring-your-own keys** | ✅ | ❌ | ❌ | ❌ |
+| **Scored, rubric-based** feedback | ✅ | ✅ | ❌ | varies |
+| **Open source** | ✅ AGPLv3 | ❌ | ❌ | mostly ❌ |
+| Works **without sign-in** | ✅ | ❌ | ❌ | ❌ |
+
+<sub>Competitor columns reflect their publicly advertised positioning at time of writing; check their sites for current details. "Generic chat prep" = ChatGPT-style text Q&A without a voice loop or scored rubric.</sub>
+
 ## 📰 News
 
 > - **[2026.06]** 🧱 **Early build is up.** Cross-language `InterviewContext` contract (TS ↔ Pydantic) round-trips; prep/live/post pipelines and all web screens run **offline with mock adapters**. Pre-launch.
@@ -44,12 +62,12 @@ _(Changelog is intentionally pre-launch and honest — no "1,000 stars" or shipp
 
 ## 📦 Releases
 
-No tagged release yet — DeepInterview is pre-`v0.1`. Watch [Releases](https://github.com/your-org/deepinterview/releases) and the News section above. Citation metadata lives in [`CITATION.cff`](CITATION.cff).
+No tagged release yet — DeepInterview is pre-`v0.1`. Watch [Releases](https://github.com/ngoanpv/DeepInterview/releases) and the News section above. Citation metadata lives in [`CITATION.cff`](CITATION.cff).
 
 ## ✨ Features
 
 - **🎙️ Real-time voice interview** — cascaded **STT → LLM → TTS** on LiveKit (not speech-to-speech), so you get a full transcript, per-component control, and predictable cost. Barge-in and seeded follow-ups keep it conversational.
-- **🌐 English-first & multilingual** — every user-facing string is i18n'd (EN default, VI shipped); language is a per-session setting and STT/TTS/voice route by language. Each language is a pluggable "pack."
+- **🌐 English-first & multilingual** — every user-facing string is i18n'd (UI shipped in EN + VI); language is a per-session setting and the voice pipeline routes STT/TTS by language (see the [provider matrix](#-provider-matrix) below). Each language is a pluggable "pack."
 - **🧠 Personalized prep** — a LangGraph pipeline reads your CV + the JD, researches the target company, diffs the gap, and a **Question Planner** precomputes the plan, difficulty curve, rubrics, and seeded follow-ups — so the live loop stays fast. Uploaded **CV documents (PDF/DOCX) are parsed to text server-side with [Microsoft markitdown](https://github.com/microsoft/markitdown), with a Gemini multimodal fallback for scanned/image PDFs**.
 - **📊 Scored feedback** — a rubric-based evaluator + language coach write a per-competency `ScoreCard` with strengths, gaps, model answers, and next steps that map straight back to the questions you were asked.
 - **📚 Prep Coach** *(in progress)* — turns your gaps into an LLM study loop (plan → drills → Socratic chat). Grounded + cited answers are **optional**: set `LIGHTRAG_URL` (or wire a managed RAG behind the same adapter) to ground responses in your own uploaded materials; by default the coach answers honestly without fabricated citations.
@@ -57,7 +75,21 @@ No tagged release yet — DeepInterview is pre-`v0.1`. Watch [Releases](https://
 - **🔌 Provider-agnostic & self-hostable** — a clean adapter layer (LLM / search / embeddings, with a **mock adapter** for offline dev). Bring your own keys (Soniox/Deepgram, Cartesia/ElevenLabs, Gemini/GPT, or OSS faster-whisper / XTTS / Qwen3).
 - **🔓 Open source (AGPLv3)** — self-host the whole thing. Any paid/enterprise-only code is isolated under [`ee/`](ee/README.md).
 
+## 🔊 Provider matrix
+
+The live voice loop is **cascaded STT → LLM → TTS** over LiveKit, with each stage chosen by a `*_PROVIDER` env var. With no keys set, every stage falls back to an offline **mock adapter** so the full loop runs in CI and on day-one clones.
+
+| Stage | Default provider(s) | Notes | OSS / offline fallback |
+|---|---|---|---|
+| **STT** | Deepgram **nova-3** | all supported languages (Soniox also supported as a BYO option) | mock adapter (faster-whisper planned) |
+| **TTS** | Cartesia **sonic** | en, es, zh, fr, de, ja, pt, hi, it, ko, nl, pl, ru, sv, tr | mock adapter (XTTS planned) |
+| **TTS** | ElevenLabs **Flash v2.5** | **Vietnamese** + other non-Cartesia languages | — |
+| **TTS** | Gemini TTS | fallback when no ElevenLabs key is set | — |
+| **LLM** | Gemini (live tier) / OpenAI | live + prep/post reasoning | mock adapter (Qwen3 planned) |
+
 ## 🚀 Quickstart
+
+> **🔓 No sign-in required.** The OSS self-host runs **anonymously** — setup, the live interview, and the report all work with **no account and no login**. (The report reads directly from the agent API.) Supabase auth + billing are a **hosted-only** layer; you don't need them to run the loop yourself.
 
 **Requirements:** Node **20+** (22 recommended — see [`.nvmrc`](.nvmrc)) · pnpm 11 · Python 3.11+ with [uv](https://docs.astral.sh/uv/) (for the agent) · Docker (for the full stack).
 
@@ -66,7 +98,7 @@ No tagged release yet — DeepInterview is pre-`v0.1`. Watch [Releases](https://
 This is what's tested in CI today. It builds the contracts, runs the test suites, and exercises the prep/live/post pipelines against **mock adapters** — no provider keys required.
 
 ```bash
-git clone https://github.com/your-org/deepinterview.git
+git clone https://github.com/ngoanpv/DeepInterview.git
 cd deepinterview
 
 pnpm install          # install the JS/TS workspace
@@ -87,6 +119,12 @@ docker compose up         # web (:3000) + agent worker + lightrag (:9621)
 ```
 
 > **Status:** the compose file validates (`docker compose config`) and wires all three services. Real images, healthchecks, and the "open http://localhost:3000 and talk to it" experience are being finished in **DevOps (WP-12)**. Until then, prefer the offline path above for development.
+
+### 3. One-click deploy
+
+[![Deploy web to Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ngoanpv/DeepInterview)
+
+The button deploys **`apps/web`** to Vercel. The Python **agent** is not serverless — run it via **Docker** (the `agent-api` image above) or on **[LiveKit Cloud Agents](https://docs.livekit.io/agents/)** for the live voice worker, and point the web app at it with `AGENT_API_URL`. See [`docs/DEPLOY.md`](docs/DEPLOY.md) (WP-12, in progress).
 
 <details><summary>Configuring providers & adding a language pack</summary>
 
@@ -135,6 +173,16 @@ The spine of the system is a **prep / live / post** split (strong async models b
 
 **Module boundaries:** `apps/web` owns UI/auth/upload/token and knows nothing about LLM/STT/TTS · `apps/agent` owns the voice loop + prep/post pipelines + avatar render util · `services/lightrag` owns the knowledge base · `cli/` owns first-run setup · **`packages/shared` is the cross-language contract** (TS source of truth, mirrored as Pydantic). See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and the full spec in [`site/AI-Interviewer-Build-Handoff.md`](site/AI-Interviewer-Build-Handoff.md).
 
+## 📦 Using DeepInterview
+
+| Edition | What you get | Auth & billing | Status |
+|---|---|---|---|
+| **Self-host (AGPLv3)** | The whole platform, your keys, your data. Runs **anonymously** — no sign-in. | None required | ✅ Available now (this repo) |
+| **Cloud (hosted)** | Managed hosting with accounts + plan tiers, so you skip the ops. | Supabase auth + billing | 🟡 Planned (pre-launch) |
+| **Enterprise (`ee/`)** | SSO / RBAC / audit logging under a separate commercial license, kept out of the AGPL core. | Org SSO | 🟡 Scaffolded |
+
+> The **auth + billing layer is hosted-only** — the open-source self-host runs the full prep → interview → report → coach loop without any account. See [`ee/`](ee/README.md) for the enterprise boundary.
+
 ## 📸 Screenshots
 
 > Placeholders — see [`assets/README.md`](assets/README.md). The screens exist (`/setup`, `/interview/[id]`, `/report/[id]`); polished captures land with the demo.
@@ -159,13 +207,13 @@ The build is organized into **13 work packages (WP-0…WP-13)** across phases **
 
 > "Offline-verified" means the pipeline runs end-to-end against mock adapters with tests green — **real-time voice on live providers and a hosted demo are the next milestone**, not a current claim.
 
-**Find it useful? [Give us a ⭐](https://github.com/your-org/deepinterview)** — star velocity is what gets a project discovered, and it genuinely helps.
+**Find it useful? [Give us a ⭐](https://github.com/ngoanpv/DeepInterview)** — star velocity is what gets a project discovered, and it genuinely helps.
 
 ## 🌐 Community
 
 - 💬 **Discord** — join the build-in-public chat _(invite link TBD — opens at launch)_.
-- 🗣️ **[GitHub Discussions](https://github.com/your-org/deepinterview/discussions)** — questions, ideas, language-pack requests.
-- 🐛 **[Issues](https://github.com/your-org/deepinterview/issues)** — bugs & features (templates provided).
+- 🗣️ **[GitHub Discussions](https://github.com/ngoanpv/DeepInterview/discussions)** — questions, ideas, language-pack requests.
+- 🐛 **[Issues](https://github.com/ngoanpv/DeepInterview/issues)** — bugs & features (templates provided).
 
 Built in the open. We respond to issues — ghosting contributors is the #1 cause of OSS death, and we don't intend to.
 
@@ -178,13 +226,9 @@ We'd love your help — especially **language packs**, **provider adapters**, an
 - 📜 [Code of Conduct](CODE_OF_CONDUCT.md) · 🔒 [Security policy](SECURITY.md).
 
 <!-- Contributor mosaic — populates after the repo is public (contrib.rocks reads the public contributor list). -->
-[![Contributors](https://contrib.rocks/image?repo=your-org/deepinterview)](https://github.com/your-org/deepinterview/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=ngoanpv/DeepInterview)](https://github.com/ngoanpv/DeepInterview/graphs/contributors)
 
 > _The mosaic above renders once the repo is public and has contributors._
-
-## ⭐ Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=your-org/deepinterview&type=Date)](https://star-history.com/#your-org/deepinterview&Date)
 
 ## 📖 Citation
 
@@ -196,7 +240,7 @@ If DeepInterview helps your work, please cite it. Full metadata is in [`CITATION
   author = {The DeepInterview contributors},
   year   = {2026},
   license = {AGPL-3.0-only},
-  url    = {https://github.com/your-org/deepinterview}
+  url    = {https://github.com/ngoanpv/DeepInterview}
 }
 ```
 

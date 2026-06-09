@@ -8,6 +8,6 @@ abstract: >-
   English-first, multilingual.
 type: software
 license: AGPL-3.0-only
-repository-code: "https://github.com/your-org/deepinterview"
+repository-code: "https://github.com/ngoanpv/DeepInterview"
 authors:
   - name: "The DeepInterview contributors"
