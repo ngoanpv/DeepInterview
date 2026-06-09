@@ -48,6 +48,33 @@ type Step = { key: string; label: string };
 const MIN_JD_CHARS = 40;
 const MIN_CV_CHARS = 30;
 
+// One-click sample inputs for fast testing / demos. Each is a matched CV + JD +
+// company so the prep pipeline gets a coherent pair. Pure UX sugar — clicking a
+// sample just fills the form fields; nothing is submitted.
+const SAMPLES = [
+  {
+    id: "backend",
+    label: "Backend Engineer · Stripe",
+    company: "Stripe",
+    cv: "Jordan Rivera — Senior Backend Engineer. 7 years building high-throughput payment and API platforms. Led a ledger service at 5k req/s; cut p99 latency 40% with async batching; owned idempotency and reconciliation. Skills: Python, Go, PostgreSQL, Kafka, gRPC, Kubernetes, distributed systems.",
+    jd: "Senior Backend Engineer to build payment APIs at scale. Own services in Python/Go, design event-driven systems with Kafka, and ensure reliability, idempotency, and low p99 latency on PostgreSQL. Strong distributed-systems background required.",
+  },
+  {
+    id: "frontend",
+    label: "Frontend Engineer · Vercel",
+    company: "Vercel",
+    cv: "Sam Chen — Senior Frontend Engineer. 6 years shipping performant React/Next.js apps. Built a design system used across 30+ surfaces; improved LCP 35% with streaming SSR and image optimization. Skills: TypeScript, React, Next.js, Tailwind, accessibility, Core Web Vitals.",
+    jd: "Senior Frontend Engineer to build fast, delightful web experiences with Next.js and React. Own component architecture, Core Web Vitals, accessibility, and design-system work. Deep TypeScript and modern rendering (SSR/streaming) experience expected.",
+  },
+  {
+    id: "ml",
+    label: "ML Engineer · OpenAI",
+    company: "OpenAI",
+    cv: "Priya Nair — Machine Learning Engineer. 5 years in production ML: built feature pipelines and model serving for ranking at scale; owned offline/online evaluation and safe rollback. Skills: Python, PyTorch, Ray, feature stores, evaluation, MLOps, monitoring.",
+    jd: "Machine Learning Engineer to build and ship production ML systems: data pipelines, training, evaluation, and low-latency serving. You will own offline/online metrics, monitoring, and safe rollouts. Strong Python + PyTorch and MLOps experience required.",
+  },
+] as const;
+
 export function SetupForm({ r2Configured }: { r2Configured: boolean }) {
   const router = useRouter();
   const messages = useMessages();
@@ -91,6 +118,19 @@ export function SetupForm({ r2Configured }: { r2Configured: boolean }) {
         ? `Paste the full posting — this looks too short (at least ${MIN_JD_CHARS} characters).`
         : null;
   const canSubmit = !cvError && !jdError && !submitting;
+
+  // Fill the form with a matched sample (testing / demo). Clears any chosen file
+  // so the pasted sample CV text is what gets submitted.
+  function loadSample(s: (typeof SAMPLES)[number]) {
+    setFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setCvText(s.cv);
+    setJdText(s.jd);
+    setCompany(s.company);
+    setCvTouched(false);
+    setJdTouched(false);
+    setError(null);
+  }
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -270,6 +310,30 @@ export function SetupForm({ r2Configured }: { r2Configured: boolean }) {
         </h1>
         <p className="mt-2 text-ink-soft">{t(messages, "setup.subtitle")}</p>
       </div>
+
+      {/* Quick demo: one-click sample CV + JD + company for fast testing */}
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[13px] font-medium text-ink">Quick demo</p>
+            <p className="text-[12px] text-muted">
+              Load a matched sample CV + job description to try it fast.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {SAMPLES.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => loadSample(s)}
+                className="rounded-[10px] border border-line px-3 py-1.5 text-[12px] text-ink-soft transition-colors hover:border-ink"
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* CV */}
       <Card>

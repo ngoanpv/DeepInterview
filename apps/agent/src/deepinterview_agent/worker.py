@@ -42,12 +42,25 @@ log = get_logger(__name__)
 # fallback when the selected provider's key is missing (English-first defaults).
 
 
-def build_stt(settings):  # noqa: ANN001, ANN201 - livekit plugin types optional
+# Map our primary-language code onto the speech providers so STT transcribes —
+# and TTS speaks — in the candidate's language, not just English. Deepgram
+# nova-3 and Cartesia sonic-3 are multilingual; codes default to English when a
+# language isn't mapped. `mixed` (code-switching) uses Deepgram's "multi" model.
+_STT_LANG = {"en": "en", "vi": "vi", "es": "es", "zh": "zh", "fr": "fr", "de": "de", "ja": "ja"}
+_TTS_LANG = {"en": "en", "vi": "vi", "es": "es", "zh": "zh", "fr": "fr", "de": "de", "ja": "ja"}
+
+
+def _stt_lang(language: str, mixed: bool) -> str:
+    return "multi" if mixed else _STT_LANG.get(language, "en")
+
+
+def build_stt(settings, language="en", mixed=False):  # noqa: ANN001, ANN201 - livekit plugin types optional
+    lang = _stt_lang(language, mixed)
     provider = settings.stt_provider
     if provider == "deepgram" and settings.deepgram_api_key:
         from livekit.plugins import deepgram  # noqa: PLC0415
 
-        return deepgram.STT(api_key=settings.deepgram_api_key, language="en")
+        return deepgram.STT(api_key=settings.deepgram_api_key, language=lang)
     if provider == "soniox" and settings.soniox_api_key:
         from livekit.plugins import soniox  # noqa: PLC0415
 
@@ -55,7 +68,7 @@ def build_stt(settings):  # noqa: ANN001, ANN201 - livekit plugin types optional
     log.warning("build_stt: no configured STT provider/key; using Deepgram default")
     from livekit.plugins import deepgram  # noqa: PLC0415
 
-    return deepgram.STT()
+    return deepgram.STT(language=lang)
 
 
 def build_llm(settings):  # noqa: ANN001, ANN201
@@ -75,20 +88,22 @@ def build_llm(settings):  # noqa: ANN001, ANN201
     return openai.LLM()
 
 
-def build_tts(settings):  # noqa: ANN001, ANN201
+def build_tts(settings, language="en"):  # noqa: ANN001, ANN201
+    lang = _TTS_LANG.get(language, "en")
     provider = settings.tts_provider
     if provider == "cartesia" and settings.cartesia_api_key:
         from livekit.plugins import cartesia  # noqa: PLC0415
 
-        return cartesia.TTS(api_key=settings.cartesia_api_key)
+        return cartesia.TTS(api_key=settings.cartesia_api_key, language=lang)
     if provider == "elevenlabs" and settings.elevenlabs_api_key:
         from livekit.plugins import elevenlabs  # noqa: PLC0415
 
+        # ElevenLabs' multilingual model infers the language from the text.
         return elevenlabs.TTS(api_key=settings.elevenlabs_api_key)
     log.warning("build_tts: no configured TTS provider/key; using Cartesia default")
     from livekit.plugins import cartesia  # noqa: PLC0415
 
-    return cartesia.TTS()
+    return cartesia.TTS(language=lang)
 
 
 def build_vad():  # noqa: ANN201
@@ -155,11 +170,14 @@ async def entrypoint(ctx: JobContext) -> None:
 
     userdata = InterviewUserdata(ctx=interview_ctx, session_id=session_id)
 
+    # Route STT/TTS by the interview's primary language so a non-English session
+    # (e.g. Vietnamese) is both understood and spoken — not just prompted for.
+    lang_mode = interview_ctx.plan.language_mode
     session: AgentSession[InterviewUserdata] = AgentSession(
         userdata=userdata,
-        stt=build_stt(settings),
+        stt=build_stt(settings, lang_mode.primary, lang_mode.mixed),
         llm=build_llm(settings),
-        tts=build_tts(settings),
+        tts=build_tts(settings, lang_mode.primary),
         vad=build_vad(),
         # Lean live loop: low-latency turns. Turn detection is on by default in
         # 1.x; preemptive generation starts the LLM before end-of-turn settles.
