@@ -8,6 +8,10 @@ export const PrepRequestSchema = z.object({
   jd_text: z.string(),
   company: z.string(),
   language_mode: LanguageModeSchema,
+  // Owning user (Supabase auth uid). Optional so the offline/dev path (no auth)
+  // still validates; when present the agent stamps it on the `sessions` row so
+  // the report's RLS read (`auth.uid() = user_id`) can see the row.
+  user_id: z.string().optional(),
 });
 export type PrepRequest = z.infer<typeof PrepRequestSchema>;
 
