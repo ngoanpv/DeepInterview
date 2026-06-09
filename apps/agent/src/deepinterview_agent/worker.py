@@ -189,6 +189,16 @@ async def entrypoint(ctx: JobContext) -> None:
             await deps.repo.save_transcript(session_id, userdata.transcript)
         except Exception:  # noqa: BLE001
             log.exception("worker: save_transcript failed for %s", session_id)
+        # The live loop only mutates the IN-MEMORY userdata.ctx (an AnswerRecord
+        # is appended per answered turn — see live/state.py). Write that context
+        # back BEFORE triggering scoring, or run_score -> load_context reads the
+        # prep-time (answer-less) context and produces a blank scorecard
+        # (coverage 0%). Effective when both processes share a Supabase store
+        # (the in-memory repo is process-local; same caveat as the load path).
+        try:
+            await deps.repo.save_context(session_id, userdata.ctx)
+        except Exception:  # noqa: BLE001
+            log.exception("worker: save_context failed for %s", session_id)
         # Fire scoring (WP-7) best-effort; never block shutdown on it.
         api_base = f"http://localhost:{settings.agent_api_port}"
         try:

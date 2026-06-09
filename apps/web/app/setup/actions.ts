@@ -75,7 +75,14 @@ export async function startSession(
 
   let session_id: string;
   try {
-    ({ session_id } = await requestPrep(input));
+    // Forward the signed-in user's id so the agent stamps it on the `sessions`
+    // row (sessions.user_id). Without this the row is unowned (NULL) and the
+    // report's RLS read (auth.uid() = user_id) can never see it, so the page
+    // falls back to sample data. Offline/dev has no user → omit it.
+    ({ session_id } = await requestPrep({
+      ...input,
+      user_id: userId ?? undefined,
+    }));
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Could not reach the prep service.";
