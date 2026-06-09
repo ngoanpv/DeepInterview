@@ -35,7 +35,10 @@ function mockReply(query: string): CoachReply {
         snippet: "Relevant guidance for this topic from your materials.",
       },
     ],
-    follow_ups: ["Can you give a concrete example?", "What's a common mistake here?"],
+    follow_ups: [
+      "Can you give a concrete example?",
+      "What's a common mistake here?",
+    ],
   };
 }
 
@@ -44,7 +47,10 @@ export async function POST(request: Request) {
   try {
     body = BodySchema.parse(await request.json());
   } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 },
+    );
   }
 
   try {
@@ -65,7 +71,9 @@ export async function POST(request: Request) {
     const json = await upstream.json();
     const parsed = CoachReplySchema.safeParse(json);
     // Validate the upstream shape; fall back to a mock on drift.
-    return NextResponse.json(parsed.success ? parsed.data : mockReply(body.query));
+    return NextResponse.json(
+      parsed.success ? parsed.data : mockReply(body.query),
+    );
   } catch {
     // Agent unreachable / timeout / bad JSON — stay resilient.
     return NextResponse.json(mockReply(body.query));
