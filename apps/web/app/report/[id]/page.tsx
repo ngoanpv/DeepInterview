@@ -18,6 +18,7 @@ import { CompetencyChart } from "@/components/report/competency-chart";
 import { LanguageReportCard } from "@/components/report/language-report-card";
 import { StrengthsGaps } from "@/components/report/strengths-gaps";
 import { ModelAnswers } from "@/components/report/model-answers";
+import { ScoringPoll } from "@/components/report/scoring-poll";
 import {
   TranscriptSection,
   type TranscriptTurn,
@@ -26,56 +27,74 @@ import {
 // Reads server-only config and calls the agent API per request; never prerender.
 export const dynamic = "force-dynamic";
 
+/**
+ * - `ready`   real scorecard with competency scores → full report.
+ * - `sample`  agent unreachable / unknown session → sample preview.
+ * - `empty`   interview produced no answers (status `no_answers`, or a legacy
+ *             `complete` row with a blank card) → honest empty state, NOT zeros.
+ * - `scoring` interview done but scoring hasn't produced a card yet → poll.
+ * - `error`   session errored (e.g., answers failed to persist) → honest notice.
+ */
+type ReportState = "ready" | "sample" | "empty" | "scoring" | "error";
+
 interface Loaded {
+  state: ReportState;
   scorecard: ScoreCard;
-  /** Parsed interview context for the real row, when present. */
   context: InterviewContext | null;
-  isSample: boolean;
   company: string | null;
   role: string | null;
 }
 
 /**
- * Resolve the scorecard for this session by reading the agent API
+ * Resolve the report state by reading the agent API
  * (`GET /api/session/{id}` → SessionView, which carries `scorecard` + `context`).
- * No Supabase / RLS / auth on the read path, so OSS works without sign-in. On
- * any miss — agent down, not scored yet, bad shape — we fall back to the sample
- * so the report always renders.
+ * The sample preview is used ONLY on a true miss (agent down / unknown session /
+ * shape drift). A real session with no answers resolves to `empty` (never a
+ * misleading all-zeros card), and an in-flight session resolves to `scoring`.
  */
 async function load(id: string): Promise<Loaded> {
-  const fallback: Loaded = {
+  const sample: Loaded = {
+    state: "sample",
     scorecard: SAMPLE_SCORECARD,
     context: null,
-    isSample: true,
     company: SAMPLE_INTERVIEW.company,
     role: SAMPLE_INTERVIEW.role,
   };
 
-  // Read the scorecard through the agent API (which owns persistence) — no
-  // Supabase / RLS / auth on the read path, so OSS works without sign-in. Any
-  // miss (agent down, not scored yet, bad shape) falls back to the sample.
   try {
     const res = await fetch(
       `${serverEnv.agentApiUrl}/api/session/${encodeURIComponent(id)}`,
       { cache: "no-store", signal: AbortSignal.timeout(15_000) },
     );
-    if (!res.ok) return fallback;
+    if (!res.ok) return sample;
 
     const parsed = SessionViewSchema.safeParse(await res.json());
-    if (!parsed.success) return fallback;
+    if (!parsed.success) return sample;
 
     const view = parsed.data;
-    if (!view.scorecard) return fallback;
-
-    return {
-      scorecard: view.scorecard,
+    const base = {
       context: view.context,
-      isSample: false,
       company: view.context?.job.company_name ?? null,
       role: view.context?.job.title ?? null,
     };
+    const answers = view.context?.answers.length ?? 0;
+    const hasScores = (view.scorecard?.competency_scores?.length ?? 0) > 0;
+
+    // Honest empty: no answers were captured. New sessions are flagged
+    // `no_answers`; legacy rows may be `complete` with a blank (score-less) card.
+    if (view.status === "no_answers" || (answers === 0 && !!view.scorecard && !hasScores)) {
+      return { ...base, state: "empty", scorecard: SAMPLE_SCORECARD };
+    }
+    if (view.status === "error" || view.status === "rejected") {
+      return { ...base, state: "error", scorecard: SAMPLE_SCORECARD };
+    }
+    if (view.scorecard && hasScores) {
+      return { ...base, state: "ready", scorecard: view.scorecard };
+    }
+    // Interview not scored yet — poll until a terminal state arrives.
+    return { ...base, state: "scoring", scorecard: SAMPLE_SCORECARD };
   } catch {
-    return fallback;
+    return sample;
   }
 }
 
@@ -118,6 +137,20 @@ function buildTranscript(loaded: Loaded): {
   return { questionText, turns };
 }
 
+/** Shared page chrome for the non-report (status) states. */
+function StatusShell({ children }: { children: React.ReactNode }) {
+  return (
+    <main className="mx-auto max-w-[920px] px-6 py-12">
+      <header className="flex items-center justify-between">
+        <Link href="/" className="no-underline">
+          <Eyebrow>DeepInterview</Eyebrow>
+        </Link>
+      </header>
+      <div className="mt-16 flex justify-center">{children}</div>
+    </main>
+  );
+}
+
 export default async function ReportPage({
   params,
 }: {
@@ -128,6 +161,88 @@ export default async function ReportPage({
   // No auth gate: OSS reads the report through the agent API, which needs no
   // sign-in. (Hosted/multi-tenant deployments add auth as a separate layer.)
   const loaded = await load(id);
+
+  // Still scoring: show a calm waiting state and auto-refresh until terminal.
+  if (loaded.state === "scoring") {
+    return (
+      <StatusShell>
+        <ScoringPoll />
+        <Card className="max-w-md text-center">
+          <CardContent className="flex flex-col items-center gap-3 py-10">
+            <span
+              className="h-7 w-7 animate-spin rounded-full border-2 border-accent border-t-transparent"
+              aria-hidden
+            />
+            <h1 className="font-serif text-2xl text-ink">Scoring your interview…</h1>
+            <p className="max-w-sm text-sm leading-relaxed text-muted">
+              Hang tight — we’re analyzing your answers. This page updates
+              automatically the moment your report is ready.
+            </p>
+          </CardContent>
+        </Card>
+      </StatusShell>
+    );
+  }
+
+  // No answers captured: honest empty state instead of an all-zeros report.
+  if (loaded.state === "empty") {
+    return (
+      <StatusShell>
+        <Card className="max-w-md text-center">
+          <CardContent className="flex flex-col items-center gap-4 py-10">
+            <h1 className="font-serif text-2xl text-ink">No answers recorded</h1>
+            <p className="max-w-sm text-sm leading-relaxed text-muted">
+              {loaded.role && loaded.company ? (
+                <>
+                  This {loaded.role} interview at {loaded.company} ended before any
+                  question was answered, so there’s nothing to score yet.{" "}
+                </>
+              ) : (
+                <>
+                  This interview ended before any question was answered, so there’s
+                  nothing to score yet.{" "}
+                </>
+              )}
+              Give it another go — answer out loud and we’ll build your report.
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link href="/setup" className="no-underline">
+                <Button variant="ink">Practice again</Button>
+              </Link>
+              <Link href="/" className="no-underline">
+                <Button variant="out">Back home</Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </StatusShell>
+    );
+  }
+
+  // Session errored (e.g., answers failed to persist) — be honest, don't fake zeros.
+  if (loaded.state === "error") {
+    return (
+      <StatusShell>
+        <Card className="max-w-md text-center">
+          <CardContent className="flex flex-col items-center gap-4 py-10">
+            <h1 className="font-serif text-2xl text-ink">
+              We couldn’t score this interview
+            </h1>
+            <p className="max-w-sm text-sm leading-relaxed text-muted">
+              Something went wrong saving or scoring this session, so we’re not
+              showing a report rather than show inaccurate results. Please try
+              another run.
+            </p>
+            <Link href="/setup" className="no-underline">
+              <Button variant="ink">Practice again</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </StatusShell>
+    );
+  }
+
+  // ready | sample → the full report.
   const { scorecard } = loaded;
   const { questionText, turns } = buildTranscript(loaded);
 
@@ -138,7 +253,7 @@ export default async function ReportPage({
         <Link href="/" className="no-underline">
           <Eyebrow>DeepInterview</Eyebrow>
         </Link>
-        {loaded.isSample && (
+        {loaded.state === "sample" && (
           <Badge variant="outline">Preview (sample data)</Badge>
         )}
       </header>

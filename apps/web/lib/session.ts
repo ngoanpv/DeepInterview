@@ -11,7 +11,9 @@ import { InterviewContextSchema, ScoreCardSchema } from "@deepinterview/shared";
  */
 export const SessionViewSchema = z.object({
   session_id: z.string(),
-  status: z.enum(["prep", "ready", "rejected", "error", "complete"]),
+  // "no_answers": interview produced no answers; scoring was skipped and no
+  // scorecard written, so the report shows an honest empty state (not zeros).
+  status: z.enum(["prep", "ready", "rejected", "error", "complete", "no_answers"]),
   progress: z.array(z.string()),
   prep_warnings: z.array(z.string()),
   context: InterviewContextSchema.nullable(),

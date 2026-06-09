@@ -154,6 +154,27 @@ def test_run_score_handles_missing_context() -> None:
     assert ScoreCard.model_validate(sc.model_dump()) == sc
 
 
+def test_run_score_skips_when_no_answers() -> None:
+    """A context that exists but has ZERO answers is flagged ``no_answers`` and
+    NOT scored into a misleading all-zeros ``complete`` card (the root-cause fix)."""
+    deps = build_deps()
+    # run_prep yields a ready session with a plan but no answers seeded.
+    session_id = asyncio.run(run_prep(_request(), deps))
+    ctx = asyncio.run(deps.repo.load_context(session_id))
+    assert ctx is not None and ctx.answers == []
+
+    sc = asyncio.run(run_score(ScoreRequest(session_id=session_id), deps))
+
+    # A well-formed empty card is returned (for the direct API caller)...
+    assert isinstance(sc, ScoreCard)
+    assert sc.competency_scores == []
+    assert sc.overall_score == 0.0
+    assert sc.coverage_pct == 0.0
+    assert ScoreCard.model_validate(sc.model_dump()) == sc
+    # ...but the session is flagged no_answers, NOT marked complete.
+    assert deps.repo.get_status(session_id) == "no_answers"
+
+
 def test_run_score_reports_partial_coverage() -> None:
     """Unanswered questions lower coverage_pct and never count as weak."""
     deps = build_deps()
