@@ -11,6 +11,7 @@ import asyncio
 from deepinterview_agent.coach import run_coach_chat, run_coach_plan
 from deepinterview_agent.core.deps import build_deps
 from deepinterview_agent.shared_models import (
+    Citation,
     CoachChatRequest,
     CompetencyScore,
     LanguageReport,
@@ -78,7 +79,26 @@ def test_coach_chat_returns_grounded_reply() -> None:
 
     reply = asyncio.run(run_coach_chat(req, deps))
 
-    assert isinstance(reply.answer, str)
-    # MockKnowledge grounds the reply with citations.
-    assert len(reply.citations) >= 1
+    assert isinstance(reply.answer, str) and reply.answer
+    # No real KB configured (default) -> ungrounded + honest: NO fabricated sources.
+    assert reply.citations == []
     assert len(reply.follow_ups) <= 3
+
+
+def test_coach_chat_grounds_when_backend_configured() -> None:
+    """With a real KB configured (LIGHTRAG_URL) the coach grounds + returns citations."""
+    deps = build_deps()
+    original = deps.settings.lightrag_url
+
+    class _FakeKnowledge:
+        async def search(self, user_id: str, query: str, lang: str):
+            return ("Grounded context.", [Citation(title="Prep notes", url="kb://x", snippet="s")])
+
+    deps.settings.lightrag_url = "http://localhost:9621"
+    deps.knowledge = _FakeKnowledge()
+    try:
+        req = CoachChatRequest(session_id="sess_x", query="What is exactly-once?", lang="en")
+        reply = asyncio.run(run_coach_chat(req, deps))
+        assert len(reply.citations) >= 1
+    finally:
+        deps.settings.lightrag_url = original
