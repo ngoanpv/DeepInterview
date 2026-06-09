@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time to file a bug! Please search
-        [existing issues](https://github.com/deepinterview/deepinterview/issues)
+        [existing issues](https://github.com/ngoanpv/DeepInterview/issues)
         first to avoid duplicates.
 
         **Security issue?** Do not file it here — email

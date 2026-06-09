@@ -18,7 +18,7 @@ DeepInterview is an **early open build**. The most valuable contributions right 
 **The 60-second offline setup (no API keys required)**
 
 ```bash
-git clone https://github.com/your-org/deepinterview.git
+git clone https://github.com/ngoanpv/DeepInterview.git
 cd deepinterview
 
 pnpm install      # JS/TS workspace (apps/web, packages/shared, cli)
@@ -113,10 +113,16 @@ This is the cleanest first contribution — see the good-first-issues for a work
 
 ---
 
-## 6. Licensing, CLA & the `/ee` boundary
+## 6. Licensing, DCO sign-off & the `/ee` boundary
 
 - **Core is [AGPL-3.0-only](LICENSE).** By contributing to the core you agree your contribution is licensed under AGPLv3.
-- **CLA:** we ask contributors to sign a lightweight Contributor License Agreement before a first merge (so the project can keep an open-core model and offer commercial terms for `ee/`). The CLA bot will comment on your first PR with the link. _(Until the bot is wired, note your agreement in the PR description.)_
+- **Sign off your commits (DCO).** We use the lightweight [Developer Certificate of Origin](https://developercertificate.org/) instead of a CLA — no paperwork, no bot. Just add a `Signed-off-by` line by committing with the `-s` flag:
+
+  ```bash
+  git commit -s -m "feat(wp-5): add Deepgram STT adapter"
+  ```
+
+  This certifies you wrote the change (or have the right to submit it) under the project's license. Forgot it on an existing commit? `git commit --amend -s` (or `git rebase --signoff` for a range), then force-push your branch.
 - **Do not move core features into `ee/`.** `ee/` is reserved for genuinely enterprise-only concerns (SSO, RBAC, audit logging) under a separate commercial license. Anything a self-hoster needs to run a useful interview stays in the AGPL core.
 - **Never commit secrets.** Keys live in `.env` only (gitignored). See [SECURITY.md](SECURITY.md).
 
@@ -124,8 +130,8 @@ This is the cleanest first contribution — see the good-first-issues for a work
 
 ## 7. Getting help
 
-- 🗣️ [GitHub Discussions](https://github.com/your-org/deepinterview/discussions) for questions and design chat.
-- 🐛 [Issues](https://github.com/your-org/deepinterview/issues) for bugs/features (use the templates).
+- 🗣️ [GitHub Discussions](https://github.com/ngoanpv/DeepInterview/discussions) for questions and design chat.
+- 🐛 [Issues](https://github.com/ngoanpv/DeepInterview/issues) for bugs/features (use the templates).
 - 📜 Be kind — we follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 Welcome aboard. 🌍
