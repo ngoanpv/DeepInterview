@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { InterviewContextSchema } from "@deepinterview/shared";
+import { InterviewContextSchema, ScoreCardSchema } from "@deepinterview/shared";
 
 /**
  * Client/server-shared view of a prep session as exposed by the agent
@@ -15,6 +15,9 @@ export const SessionViewSchema = z.object({
   progress: z.array(z.string()),
   prep_warnings: z.array(z.string()),
   context: InterviewContextSchema.nullable(),
+  // Present once post-interview scoring has run; the report reads it from here
+  // (via the agent API) so no Supabase/auth is needed on the read path.
+  scorecard: ScoreCardSchema.nullish(),
 });
 export type SessionView = z.infer<typeof SessionViewSchema>;
 
@@ -47,6 +50,7 @@ function preparingFallback(id: string): SessionView {
     progress: [],
     prep_warnings: [],
     context: null,
+    scorecard: null,
   };
 }
 
