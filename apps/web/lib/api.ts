@@ -47,5 +47,7 @@ export function requestScore(body: ScoreRequest): Promise<ScoreResponse> {
 
 /** Build a Study Coach plan from a scorecard's weak competencies (server-side). */
 export function requestCoachPlan(scorecard: ScoreCard): Promise<StudyPlan> {
-  return postJson("/api/coach/plan", { scorecard }, (d) => StudyPlanSchema.parse(d));
+  return postJson("/api/coach/plan", { scorecard }, (d) =>
+    StudyPlanSchema.parse(d),
+  );
 }

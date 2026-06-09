@@ -108,7 +108,8 @@ export function SetupForm({ r2Configured }: { r2Configured: boolean }) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(reader.error ?? new Error("Could not read file."));
+      reader.onerror = () =>
+        reject(reader.error ?? new Error("Could not read file."));
       reader.readAsDataURL(f);
     });
   }
