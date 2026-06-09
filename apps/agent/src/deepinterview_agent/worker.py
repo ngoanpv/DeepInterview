@@ -242,15 +242,43 @@ async def entrypoint(ctx: JobContext) -> None:
         except Exception:  # noqa: BLE001
             log.exception("worker: save_transcript failed for %s", session_id)
         # The live loop only mutates the IN-MEMORY userdata.ctx (an AnswerRecord
-        # is appended per answered turn — see live/state.py). Write that context
-        # back BEFORE triggering scoring, or run_score -> load_context reads the
-        # prep-time (answer-less) context and produces a blank scorecard
-        # (coverage 0%). Effective when both processes share a Supabase store
-        # (the in-memory repo is process-local; same caveat as the load path).
+        # is appended per answered turn — see live/state.py). Persist it BEFORE
+        # scoring; if persistence FAILS we must NOT score, or run_score ->
+        # load_context reads the prep-time (answer-less) context and produces a
+        # blank "complete" scorecard (coverage 0%). Both processes share the
+        # Supabase store (the in-memory repo is process-local; same caveat as the
+        # load path).
+        context_saved = False
         try:
             await deps.repo.save_context(session_id, userdata.ctx)
+            context_saved = True
         except Exception:  # noqa: BLE001
-            log.exception("worker: save_context failed for %s", session_id)
+            log.error(
+                "worker: save_context FAILED for %s — answers not persisted; "
+                "skipping scoring to avoid a blank scorecard",
+                session_id,
+                exc_info=True,
+            )
+
+        if not context_saved:
+            # Persistence failed: mark the session errored so the report shows an
+            # honest message rather than a misleading all-zeros card.
+            try:
+                await deps.repo.update_status(session_id, "error")
+            except Exception:  # noqa: BLE001
+                log.error("worker: update_status(error) failed for %s", session_id, exc_info=True)
+            return
+
+        if not userdata.ctx.answers:
+            # Interview produced no answers — record an honest terminal state and
+            # skip scoring entirely (no LLM calls, no blank "complete" card).
+            log.info("worker: session %s has no answers; marking no_answers (skip scoring)", session_id)
+            try:
+                await deps.repo.update_status(session_id, "no_answers")
+            except Exception:  # noqa: BLE001
+                log.error("worker: update_status(no_answers) failed for %s", session_id, exc_info=True)
+            return
+
         # Fire scoring (WP-7) best-effort; never block shutdown on it.
         api_base = f"http://localhost:{settings.agent_api_port}"
         try:
