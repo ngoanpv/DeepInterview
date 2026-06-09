@@ -150,4 +150,45 @@ def test_run_score_handles_missing_context() -> None:
     assert sc.competency_scores == []
     assert sc.weak_competencies == []
     assert sc.overall_score == 0.0
+    assert sc.coverage_pct == 0.0
     assert ScoreCard.model_validate(sc.model_dump()) == sc
+
+
+def test_run_score_reports_partial_coverage() -> None:
+    """Unanswered questions lower coverage_pct and never count as weak."""
+    deps = build_deps()
+    session_id, ctx = _prepare_session(deps)  # seeds 3 answers
+
+    sc = asyncio.run(run_score(ScoreRequest(session_id=session_id), deps))
+
+    answered_ids = {a.question_id for a in ctx.answers if a.transcript and a.transcript.strip()}
+    total = len(ctx.plan.questions)
+    expected = len(answered_ids) / total if total else 1.0
+    assert abs(sc.coverage_pct - expected) < 1e-9
+
+    # A competency we never probed must not appear as weak or even as a score.
+    answered_comps = {q.target_competency for q in ctx.plan.questions if q.id in answered_ids}
+    assert set(sc.weak_competencies) <= answered_comps
+    assert {cs.competency for cs in sc.competency_scores} <= answered_comps
+
+
+def test_run_score_degrades_when_a_stage_fails(monkeypatch) -> None:
+    """A failing scoring stage yields a valid, persisted, COMPLETE scorecard."""
+    deps = build_deps()
+    session_id, _ctx = _prepare_session(deps)
+
+    import deepinterview_agent.post as post
+
+    async def _boom(*args, **kwargs):
+        raise RuntimeError("provider exploded")
+
+    # Competency evaluation blows up; run_score must still return a valid card,
+    # persist it, and mark the session complete — never raise or leave it stuck.
+    monkeypatch.setattr(post, "evaluate", _boom)
+
+    sc = asyncio.run(run_score(ScoreRequest(session_id=session_id), deps))
+
+    assert isinstance(sc, ScoreCard)
+    assert sc.competency_scores == []  # evaluation degraded to empty
+    assert ScoreCard.model_validate(sc.model_dump()) == sc
+    assert deps.repo.get_status(session_id) == "complete"
