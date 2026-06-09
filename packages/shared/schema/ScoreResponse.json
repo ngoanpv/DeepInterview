@@ -120,6 +120,10 @@
         },
         "summary": {
           "type": "string"
+        },
+        "coverage_pct": {
+          "default": 1,
+          "type": "number"
         }
       },
       "required": [

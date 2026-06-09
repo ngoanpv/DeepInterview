@@ -178,6 +178,7 @@ export const SAMPLE_INTERVIEW_CONTEXT: InterviewContext = {
   ],
   scorecard: {
     overall_score: 78.5,
+    coverage_pct: 1.0,
     competency_scores: [
       {
         competency: "technical_leadership",
