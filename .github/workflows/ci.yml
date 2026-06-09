@@ -12,9 +12,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install pnpm
+        # Version comes from package.json `packageManager` (pnpm@11.5.2).
+        # Pinning it here too makes pnpm/action-setup error with
+        # ERR_PNPM_BAD_PM_VERSION ("Multiple versions of pnpm specified").
         uses: pnpm/action-setup@v4
-        with:
-          version: 11
 
       - name: Setup Node
         uses: actions/setup-node@v4
