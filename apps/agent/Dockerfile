@@ -40,3 +40,12 @@ EXPOSE 8000
 
 # Default = the API service. Override `command:` to run the worker.
 CMD ["uv", "run", "uvicorn", "deepinterview_agent.app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# ---- worker: base + the `livekit` extra for the live voice loop (WP-5) ------
+# The agent-worker compose service (profile: live) builds THIS target — the base
+# image omits livekit-agents + the STT/TTS/LLM plugin set the worker imports at
+# load time, so running the worker off the base image would ModuleNotFoundError.
+FROM base AS worker
+RUN uv sync --frozen --no-dev --extra livekit || uv sync --no-dev --extra livekit
+# `start` connects to LiveKit and waits for jobs (needs LIVEKIT_*/STT/TTS keys).
+CMD ["uv", "run", "python", "-m", "deepinterview_agent.worker", "start"]

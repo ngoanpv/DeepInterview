@@ -2,6 +2,10 @@ packages:
   - "apps/*"
   - "packages/*"
   - "cli"
-onlyBuiltDependencies:
-  - esbuild
-  - sharp
+# pnpm 11 build-script allowlist (renamed from onlyBuiltDependencies, which pnpm
+# 11 ignores). esbuild + sharp need their native postinstall to run; without
+# approving them here, `pnpm install` fails with ERR_PNPM_IGNORED_BUILDS in
+# CI/Docker (non-interactive).
+allowBuilds:
+  esbuild: true
+  sharp: true

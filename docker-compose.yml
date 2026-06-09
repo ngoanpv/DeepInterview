@@ -33,6 +33,7 @@ services:
     build:
       context: .
       dockerfile: apps/agent/Dockerfile
+      target: base
     command:
       - uv
       - run
@@ -70,6 +71,7 @@ services:
     build:
       context: .
       dockerfile: apps/agent/Dockerfile
+      target: worker
     profiles:
       - live
     command:
@@ -78,6 +80,7 @@ services:
       - python
       - -m
       - deepinterview_agent.worker
+      - start
     env_file:
       - path: .env
         required: false
