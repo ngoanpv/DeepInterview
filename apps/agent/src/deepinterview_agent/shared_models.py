@@ -295,6 +295,10 @@ class PrepRequest(BaseModel):
     jd_text: str
     company: str
     language_mode: LanguageMode
+    # Owning user (Supabase auth uid). Optional so the offline/dev path (no auth)
+    # still validates; when present it is stamped on the `sessions` row so the
+    # report's RLS read (auth.uid() = user_id) can see the row. Mirrors api.ts.
+    user_id: str | None = None
 
 
 class PrepResponse(BaseModel):

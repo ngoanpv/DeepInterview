@@ -57,6 +57,9 @@ class SessionRepository(Protocol):
 class _SessionRow:
     id: str
     status: str = "prep"
+    # Owning user (Supabase auth uid); None for the offline/dev path. Stamped so
+    # the web report's RLS read (auth.uid() = user_id) can see the row.
+    user_id: str | None = None
     company: str | None = None
     cv_url: str | None = None
     jd_text: str | None = None
@@ -80,6 +83,7 @@ class MemoryRepository:
         self._rows[session_id] = _SessionRow(
             id=session_id,
             status="prep",
+            user_id=req.user_id,
             company=req.company,
             cv_url=req.cv_url,
             jd_text=req.jd_text,
@@ -183,6 +187,9 @@ class SupabaseRepository:
         payload = {
             "id": session_id,
             "status": "prep",
+            # Stamp the owner so the web report's RLS read (auth.uid() = user_id)
+            # can see this row. None on the offline/dev path (column is nullable).
+            "user_id": req.user_id,
             "company": req.company,
             "cv_url": req.cv_url,
             "jd_text": req.jd_text,

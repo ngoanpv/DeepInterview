@@ -37,6 +37,9 @@
         "primary",
         "mixed"
       ]
+    },
+    "user_id": {
+      "type": "string"
     }
   },
   "required": [
