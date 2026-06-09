@@ -52,8 +52,17 @@ def _friendly(kind: str, reason: str) -> str:
 
 
 def _looks_like_url(text: str) -> bool:
-    """True if ``text`` is a single http(s) URL token (then we don't word-check it)."""
+    """True if ``text`` is a document pointer we shouldn't word-check.
+
+    Accepts a single http(s) URL token *and* a ``data:`` URL (base64 file bytes
+    from the no-storage upload path). Both are pointers to a real document whose
+    text is extracted before analysis, so they must not be flagged as junk.
+    """
     stripped = text.strip()
+    # A data: URL carries no whitespace meaning; check the scheme prefix directly
+    # (urlparse treats the whole payload as the path, which is fine here).
+    if stripped.startswith("data:"):
+        return True
     if " " in stripped or "\n" in stripped:
         return False
     parsed = urlparse(stripped)
