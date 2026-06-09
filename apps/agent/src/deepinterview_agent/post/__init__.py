@@ -69,6 +69,38 @@ def _missing_context_scorecard(session_id: str) -> ScoreCard:
     )
 
 
+def _no_answers_scorecard(session_id: str) -> ScoreCard:
+    """A valid, empty scorecard for a session that has a context but NO answers.
+
+    Returned (not persisted) so a direct ``/api/score`` caller always gets a
+    well-formed body. The session is flagged ``no_answers`` instead of
+    ``complete`` so the report can show an honest empty state rather than a
+    misleading all-zeros card.
+    """
+    return ScoreCard(
+        overall_score=0.0,
+        competency_scores=[],
+        strengths=[],
+        weaknesses=[],
+        weak_competencies=[],
+        model_answers=[],
+        next_steps=[],
+        language_report=LanguageReport(
+            fluency_score=0.0,
+            filler_word_count=0,
+            clarity_score=0.0,
+            code_switching_notes="",
+            pronunciation_notes="",
+            summary="No answers were recorded for this interview.",
+        ),
+        summary=(
+            f"No answers were recorded for session {session_id}; "
+            "the interview ended before any question was answered."
+        ),
+        coverage_pct=0.0,
+    )
+
+
 def _fallback_language_report() -> LanguageReport:
     """Neutral, well-formed language report used when the coach stage fails."""
     return LanguageReport(
@@ -157,6 +189,16 @@ async def run_score(req: ScoreRequest, deps: Deps) -> ScoreCard:
         # both an unknown session (nothing to write) and a prep-errored session
         # (don't overwrite its "error" status with "complete").
         return _missing_context_scorecard(req.session_id)
+
+    if not ctx.answers:
+        # A context exists but no answers were captured (interview ended before
+        # any question was answered, or answers never persisted). Do NOT run the
+        # LLM scoring stages or mark the session "complete" with a blank card —
+        # that yields a misleading all-zeros report. Flag it "no_answers" so the
+        # UI shows an honest empty state, and persist NO scorecard.
+        log.info("post: session %s has no answers; skipping scoring (no_answers)", req.session_id)
+        await deps.repo.update_status(req.session_id, "no_answers")
+        return _no_answers_scorecard(req.session_id)
 
     timeout = deps.settings.score_stage_timeout_sec
 
