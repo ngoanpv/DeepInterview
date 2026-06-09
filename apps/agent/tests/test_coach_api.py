@@ -52,6 +52,7 @@ def test_coach_chat_endpoint() -> None:
     )
     assert resp.status_code == 200
     reply = resp.json()
-    assert isinstance(reply["answer"], str)
-    assert len(reply["citations"]) >= 1
+    assert isinstance(reply["answer"], str) and reply["answer"]
+    # Ungrounded by default (no LIGHTRAG_URL) -> honest: no fabricated citations.
+    assert reply["citations"] == []
     assert len(reply["follow_ups"]) <= 3

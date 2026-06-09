@@ -52,8 +52,7 @@ def coach_agent_instructions(weak_areas_summary: str, lang: str) -> str:
         f"Primary language: {lang}. Coach in this language.\n\n"
         "Coach Socratically: ask one focused question at a time to draw out the "
         "candidate's thinking before you explain. Give a hint or a worked example "
-        "only after they have tried, and never lecture at length. When grounding "
-        "is useful, call search_knowledge_base to pull the candidate's prep notes, "
-        "then teach from them. Keep momentum: pick the weakest area first, confirm "
+        "only after they have tried, and never lecture at length. Keep momentum: "
+        "pick the weakest area first, confirm "
         "understanding, then move on. Never read a rubric or score aloud."
     )

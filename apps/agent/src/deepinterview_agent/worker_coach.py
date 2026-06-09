@@ -19,8 +19,8 @@ starts a lean :class:`~deepinterview_agent.live.coach_agent.CoachAgent` session.
 
 The heavy planning (``run_coach_plan`` / ``run_coach_chat``) stays OFFLINE in the
 ``coach/`` module and over the ``/api/coach`` routes; this worker only carries the
-spoken turn loop. Grounded KB lookups are wired only when ``enable_coach_kb`` is
-set (OFF by default), keeping the default turn path lean.
+spoken turn loop and wires no retrieval tool onto it — grounded coaching lives in
+the latency-tolerant ``/api/coach/chat`` route, not the live loop.
 
 This module is integration-tested MANUALLY (it needs the livekit extra + live
 keys); there is no offline unit test for the worker itself. The livekit-free
@@ -76,10 +76,6 @@ async def entrypoint(ctx: JobContext) -> None:
     # transcript can be persisted on shutdown the same way.
     userdata = InterviewUserdata(ctx=interview_ctx, session_id=session_id)
 
-    # Gate the (latency-adding) grounded KB tool behind a Settings flag; OFF by
-    # default keeps the coach turn path lean and the default config fully offline.
-    knowledge = deps.knowledge if settings.enable_coach_kb else None
-
     session: AgentSession[InterviewUserdata] = AgentSession(
         userdata=userdata,
         stt=build_stt(settings),
@@ -101,8 +97,6 @@ async def entrypoint(ctx: JobContext) -> None:
         agent=CoachAgent(
             weak_areas_summary=summary,
             lang=primary,
-            knowledge=knowledge,
-            user_id=session_id,
         ),
         room=ctx.room,
     )

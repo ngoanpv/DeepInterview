@@ -94,7 +94,7 @@ export function GroundedChat() {
     <Card className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-line px-6 py-4">
         <div>
-          <Eyebrow>Grounded + cited</Eyebrow>
+          <Eyebrow>AI study coach</Eyebrow>
           <h3 className="mt-1 font-serif text-lg text-ink">Ask your coach</h3>
         </div>
         <Sparkles className="h-4 w-4 text-accent" aria-hidden />
@@ -108,9 +108,9 @@ export function GroundedChat() {
         {turns.length === 0 && !loading && (
           <div className="text-[14px] leading-relaxed text-muted">
             <p>
-              Ask anything about your weak areas. Answers are grounded in your
-              knowledge base and the company playbook, with sources you can
-              open.
+              Ask anything about your weak areas. Your coach explains concepts
+              and gives worked examples; when grounded sources are available,
+              they appear with each answer.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {SUGGESTIONS.map((s) => (

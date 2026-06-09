@@ -127,12 +127,20 @@ async def run_coach_plan(scorecard: ScoreCard, deps: Deps) -> StudyPlan:
 
 
 async def run_coach_chat(req: CoachChatRequest, deps: Deps) -> CoachReply:
-    """Answer a learner question, grounded in the knowledge base + LLM synthesis."""
-    grounded = await _guarded(
-        deps.knowledge.search(req.session_id, req.query, req.lang),
-        label="knowledge",
-    )
-    context, citations = grounded if grounded is not None else ("", [])
+    """Answer a learner question; ground + cite ONLY when a real KB is configured.
+
+    Grounding (and therefore citations) is opt-in via ``LIGHTRAG_URL``. With no
+    real retrieval backend (the default), we answer with the LLM and return NO
+    citations rather than fabricating sources over an ungrounded answer.
+    """
+    if deps.settings.lightrag_url:
+        grounded = await _guarded(
+            deps.knowledge.search(req.session_id, req.query, req.lang),
+            label="knowledge",
+        )
+        context, citations = grounded if grounded is not None else ("", [])
+    else:
+        context, citations = "", []
 
     system, user = coach_chat_prompts(req.query, context, req.lang)
     draft = await _guarded(
