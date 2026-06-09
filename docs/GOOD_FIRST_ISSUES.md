@@ -164,7 +164,7 @@ their own session. `pnpm typecheck` green.
 interview (setup → live voice → report). This is a non-code contribution that
 makes the project far more legible at first glance.
 
-**Files.** `assets/` (add `demo.gif`), `README.md` (+ `README.vi.md`) hero
+**Files.** `assets/` (add `demo.gif`), `README.md` hero
 reference, `assets/README.md` (note the source/dimensions).
 
 **Acceptance.** A short (<~15s), reasonably sized looping GIF/anim showing the
