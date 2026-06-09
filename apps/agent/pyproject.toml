@@ -23,12 +23,15 @@ supabase = ["supabase>=2.31"]
 tavily = ["tavily-python>=0.7"]
 # Live voice loop (WP-5) — heavy; install with: uv sync --extra livekit.
 # livekit-agents 1.5.x + the cascaded STT->LLM->TTS plugin set the worker needs:
-#   silero (VAD) · deepgram (STT) · cartesia (TTS) · google (Gemini live LLM) · openai.
+#   silero (VAD) · deepgram (STT) · cartesia + elevenlabs (TTS) · google (Gemini
+#   live LLM) · openai. ElevenLabs Flash v2.5 is the low-latency voice for
+#   languages Cartesia can't speak (e.g. Vietnamese).
 livekit = [
     "livekit-agents>=1.5",
     "livekit-plugins-silero>=1.5",
     "livekit-plugins-deepgram>=1.5",
     "livekit-plugins-cartesia>=1.5",
+    "livekit-plugins-elevenlabs>=1.5",
     "livekit-plugins-google>=1.5",
     "livekit-plugins-openai>=1.5",
 ]
