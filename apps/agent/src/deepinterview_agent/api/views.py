@@ -12,7 +12,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..shared_models import InterviewContext
+from ..shared_models import InterviewContext, ScoreCard
 
 __all__ = ["SessionView", "SessionStatus", "PROGRESS_STEPS"]
 
@@ -42,3 +42,7 @@ class SessionView(BaseModel):
     progress: list[str] = Field(default_factory=list)
     prep_warnings: list[str] = Field(default_factory=list)
     context: InterviewContext | None = None
+    # The assembled scorecard once post-interview scoring has run (status
+    # "complete"). Surfaced here so the web report can read it through the agent
+    # API — no Supabase/RLS/auth on the read path (OSS runs without sign-in).
+    scorecard: ScoreCard | None = None
