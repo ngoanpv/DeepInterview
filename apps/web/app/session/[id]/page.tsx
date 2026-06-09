@@ -1,6 +1,3 @@
-import { redirect } from "next/navigation";
-import { isSupabaseConfigured } from "@/lib/env";
-import { getUser } from "@/lib/supabase/server";
 import { PrepSummary } from "@/components/session/prep-summary";
 
 // Page-level auth + a per-request agent poll downstream; never prerender.
@@ -26,10 +23,7 @@ export default async function SessionPage({
   const { id } = await params;
   const { persona } = await searchParams;
 
-  if (isSupabaseConfigured()) {
-    const user = await getUser();
-    if (!user) redirect("/login");
-  }
-
+  // No auth gate — OSS runs without sign-in (the setup → prep → interview →
+  // report flow needs no login; hosted deployments add auth as a separate layer).
   return <PrepSummary sessionId={id} persona={persona ?? null} />;
 }
