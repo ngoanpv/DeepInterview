@@ -5,18 +5,17 @@ only the key(s) it computes; LangGraph merges those into the running state. Deps
 are injected into the graph via :func:`functools.partial` (see ``graph.py``), so
 each compiled node presents the ``(state)`` signature LangGraph expects.
 
-``fetch_cv`` is deliberately best-effort and offline-tolerant: any failure to
-GET the CV URL (DNS error, timeout, non-2xx, malformed URL) falls back to using
-the URL string itself as the document text. This keeps the whole pipeline — and
-the existing ``POST /api/prep`` test that points at an unreachable example.com —
-green without network access.
+``fetch_cv`` is deliberately best-effort and offline-tolerant: it delegates to
+:func:`deepinterview_agent.prep.cv_extract.extract_cv_text`, which parses an
+uploaded PDF/DOCX (``data:`` URL or fetched ``http(s)`` URL) into real text and,
+on any failure, falls back to the URL string itself as the document text. This
+keeps the whole pipeline — and the existing ``POST /api/prep`` test that points
+at an unreachable example.com — green without network access.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-
-import httpx
 
 from ..core.adapters.mock import build_mock
 from ..core.logging import get_logger
@@ -28,6 +27,7 @@ from ..shared_models import (
     JobSpec,
     QuestionPlan,
 )
+from .cv_extract import extract_cv_text
 from .prompts import (
     company_research_prompts,
     cv_analysis_prompts,
@@ -42,9 +42,6 @@ if TYPE_CHECKING:
     from ..core.deps import Deps
 
 log = get_logger(__name__)
-
-# Keep the CV fetch tight so an unreachable host fails fast offline.
-_CV_FETCH_TIMEOUT_SEC = 5.0
 
 
 async def _mark(state: PrepState, deps: Deps, step: str) -> None:
@@ -74,24 +71,28 @@ async def _warn(state: PrepState, deps: Deps, warnings: list[str]) -> None:
 
 
 async def fetch_cv(state: PrepState, deps: Deps) -> PrepState:
-    """Best-effort fetch of the CV document; fall back to the URL string.
+    """Best-effort parse of the CV document into text; fall back to the URL string.
 
-    Idempotent: if ``cv_text`` is already in state (the caller pre-fetched it so
-    it could validate inputs), this is a no-op — we never fetch the CV twice.
+    Delegates to :func:`extract_cv_text`, which converts an uploaded PDF/DOCX
+    (``data:`` URL or fetched ``http(s)`` URL) into plain text via markitdown
+    (Gemini fallback for scanned/image PDFs). Any returned warnings are attached
+    to the session via ``_warn``.
+
+    Idempotent: if ``cv_text`` was already resolved (the caller pre-fetched it so
+    it could validate inputs), this is a no-op — we never parse the CV twice. We
+    check key *presence*, not truthiness: an unreadable document resolves to ``""``
+    and must NOT trigger a re-parse (which would re-warn and re-bill Gemini).
     """
-    if state.get("cv_text"):
+    if "cv_text" in state:
         return {}
     req = state["req"]
-    cv_text = req.cv_url
     try:
-        async with httpx.AsyncClient(timeout=_CV_FETCH_TIMEOUT_SEC) as client:
-            resp = await client.get(req.cv_url, follow_redirects=True)
-            resp.raise_for_status()
-            text = resp.text
-            if text.strip():
-                cv_text = text
-    except Exception as exc:  # noqa: BLE001 - best-effort: any failure -> fallback
-        log.warning("fetch_cv: using cv_url as document text (%s)", exc)
+        cv_text, warnings = await extract_cv_text(req.cv_url, deps)
+    except Exception as exc:  # noqa: BLE001 - best-effort: any failure -> raw fallback
+        log.warning("fetch_cv: extraction failed, using cv_url as text (%s)", exc)
+        return {"cv_text": req.cv_url}
+    if warnings:
+        await _warn(state, deps, warnings)
     return {"cv_text": cv_text}
 
 
