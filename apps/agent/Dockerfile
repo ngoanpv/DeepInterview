@@ -31,10 +31,13 @@ WORKDIR /app
 COPY apps/agent/pyproject.toml apps/agent/uv.lock ./
 COPY apps/agent/src ./src
 
-# Base (offline-capable) deps only — no `--extra livekit` / `--extra observability`.
-# The API runs fully on mock providers with zero keys. Enable extras at deploy
-# time for the worker (livekit) or tracing (observability).
-RUN uv sync --frozen --no-dev || uv sync --no-dev
+# Base deps + the lightweight provider SDKs (gemini/openai/supabase/tavily).
+# Without them, setting e.g. SUPABASE_URL or LLM_PROVIDER=gemini in .env makes
+# the API 500 (ModuleNotFoundError) instead of using the configured provider —
+# the image must honor whatever providers the env selects. Still excluded:
+# `livekit` (heavy; worker stage below) and `observability` (opt-in tracing).
+RUN uv sync --frozen --no-dev --extra gemini --extra openai --extra supabase --extra tavily \
+ || uv sync --no-dev --extra gemini --extra openai --extra supabase --extra tavily
 
 EXPOSE 8000
 
