@@ -33,7 +33,7 @@ services:
     build:
       context: .
       dockerfile: apps/agent/Dockerfile
-      target: base
+      target: api
     command:
       - uv
       - run
