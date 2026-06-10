@@ -46,7 +46,7 @@ export function Hero() {
               keys
             </span>
             <span className="flex items-center gap-1.5">
-              <Check size={14} className="text-ok" /> AGPLv3
+              <Check size={14} className="text-ok" /> Apache 2.0
             </span>
           </div>
         </div>
