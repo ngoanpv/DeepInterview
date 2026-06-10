@@ -8,4 +8,6 @@ pnpm install
 echo "Syncing Python agent deps (uv)…"
 ( cd apps/agent && uv sync )
 
-echo "Done. Next: pnpm deepinterview init && pnpm build && pnpm test"
+# Build BEFORE init: `pnpm deepinterview` runs cli/dist/index.js, which only
+# exists after `pnpm build` — on a fresh clone init-first fails.
+echo "Done. Next: pnpm build && pnpm deepinterview init && pnpm test (then: pnpm dev)"

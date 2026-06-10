@@ -193,8 +193,14 @@ def test_run_score_reports_partial_coverage() -> None:
     assert {cs.competency for cs in sc.competency_scores} <= answered_comps
 
 
-def test_run_score_degrades_when_a_stage_fails(monkeypatch) -> None:
-    """A failing scoring stage yields a valid, persisted, COMPLETE scorecard."""
+def test_run_score_errors_when_evaluate_stage_fails(monkeypatch) -> None:
+    """Total evaluate failure must NOT persist a zero-score 'complete' card.
+
+    Per-question failures are isolated inside ``evaluate``; if the WHOLE stage
+    dies, an answered interview must not read as scoring 0.0. The session is
+    marked errored (retriable — /api/score can re-run from the same context),
+    a valid card is still returned, and nothing is persisted.
+    """
     deps = build_deps()
     session_id, _ctx = _prepare_session(deps)
 
@@ -203,13 +209,36 @@ def test_run_score_degrades_when_a_stage_fails(monkeypatch) -> None:
     async def _boom(*args, **kwargs):
         raise RuntimeError("provider exploded")
 
-    # Competency evaluation blows up; run_score must still return a valid card,
-    # persist it, and mark the session complete — never raise or leave it stuck.
     monkeypatch.setattr(post, "evaluate", _boom)
 
     sc = asyncio.run(run_score(ScoreRequest(session_id=session_id), deps))
 
     assert isinstance(sc, ScoreCard)
-    assert sc.competency_scores == []  # evaluation degraded to empty
+    assert sc.competency_scores == []  # evaluation produced nothing
+    assert ScoreCard.model_validate(sc.model_dump()) == sc
+    assert deps.repo.get_status(session_id) == "error"
+    assert deps.repo._rows[session_id].scorecard is None  # nothing persisted
+
+
+def test_run_score_degrades_when_a_late_stage_fails(monkeypatch) -> None:
+    """A failing NARRATIVE stage still yields a valid, persisted, COMPLETE card.
+
+    Competency scores survived, so the card is persisted in degraded form
+    (numbers kept, narrative empty) rather than discarded.
+    """
+    deps = build_deps()
+    session_id, _ctx = _prepare_session(deps)
+
+    import deepinterview_agent.post as post
+
+    async def _boom(*args, **kwargs):
+        raise RuntimeError("provider exploded")
+
+    monkeypatch.setattr(post, "generate_report", _boom)
+
+    sc = asyncio.run(run_score(ScoreRequest(session_id=session_id), deps))
+
+    assert isinstance(sc, ScoreCard)
+    assert sc.competency_scores  # evaluated numbers preserved
     assert ScoreCard.model_validate(sc.model_dump()) == sc
     assert deps.repo.get_status(session_id) == "complete"

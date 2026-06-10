@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { RefreshCw, ArrowRight } from "lucide-react";
 import { Eyebrow } from "@/components/ui/eyebrow";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { buttonClasses } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/language-toggle";
-import type { StudyModule } from "@deepinterview/shared";
+import type { ScoreCard, StudyModule } from "@deepinterview/shared";
+import { serverEnv } from "@/lib/env";
+import { SessionViewSchema } from "@/lib/session";
 import { SAMPLE_SCORECARD } from "@/lib/sample-scorecard";
 import { requestCoachPlan } from "@/lib/api";
 import { StudyPlan } from "@/components/prep/study-plan";
@@ -17,25 +20,62 @@ import { SocraticCta } from "@/components/prep/socratic-cta";
 export const dynamic = "force-dynamic";
 
 /**
+ * Fetch a session's real scorecard from the agent API (same pattern as the
+ * report page's `load()`). Returns null on ANY miss — agent down, unknown
+ * session, shape drift, or a session that hasn't been scored yet — so the
+ * caller can fall back honestly.
+ */
+async function loadScorecard(id: string): Promise<ScoreCard | null> {
+  try {
+    const res = await fetch(
+      `${serverEnv.agentApiUrl}/api/session/${encodeURIComponent(id)}`,
+      { cache: "no-store", signal: AbortSignal.timeout(15_000) },
+    );
+    if (!res.ok) return null;
+    const parsed = SessionViewSchema.safeParse(await res.json());
+    if (!parsed.success) return null;
+    return parsed.data.scorecard ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Prep Coach (WP-4). The closed-loop study surface: it turns the last
  * interview's `weak_competencies` into an ordered study plan, a grounded RAG
  * chat, a spaced-repetition deck, a mastery graph, and a voice Socratic mode —
  * then loops the learner back into a new mock.
  *
  * Server shell: auth-gates only when Supabase is configured (offline it
- * proceeds), then composes the client islands. All data falls back to sample
- * content so the page renders fully with zero env keys.
+ * proceeds), then composes the client islands. The report's "Coach me" CTA
+ * links here with `?session=`, so the plan is built from THAT interview's real
+ * scorecard; the sample card is ONLY the no-session (or lookup-miss) fallback,
+ * and is labeled as a preview.
  */
-export default async function PrepPage() {
+export default async function PrepPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ session?: string | string[] }>;
+}) {
   // No auth gate — OSS runs without sign-in.
-  // Weak areas come from the last interview's scorecard (sample offline).
-  const weakAreas = SAMPLE_SCORECARD.weak_competencies;
+  const params = await searchParams;
+  const sessionId =
+    typeof params.session === "string" && params.session
+      ? params.session
+      : null;
+
+  // Weak areas come from the linked interview's real scorecard when present;
+  // otherwise fall back to the clearly-labeled sample.
+  const real = sessionId ? await loadScorecard(sessionId) : null;
+  const scorecard = real ?? SAMPLE_SCORECARD;
+  const isSample = real === null;
+  const weakAreas = scorecard.weak_competencies;
 
   // Build the real study plan from the scorecard via the coach agent. Falls back
   // to the StudyPlan component's sample modules if the agent is unreachable.
   let studyModules: StudyModule[] | undefined;
   try {
-    const plan = await requestCoachPlan(SAMPLE_SCORECARD);
+    const plan = await requestCoachPlan(scorecard);
     if (plan.modules.length > 0) studyModules = plan.modules;
   } catch {
     // Agent down / offline dev — StudyPlan renders its default sample modules.
@@ -48,14 +88,27 @@ export default async function PrepPage() {
         <Link href="/" className="no-underline">
           <Eyebrow>DeepInterview</Eyebrow>
         </Link>
-        <LanguageToggle />
+        <div className="flex items-center gap-3">
+          {isSample && <Badge variant="outline">Preview (sample data)</Badge>}
+          <LanguageToggle />
+        </div>
       </header>
 
       <div className="mt-6">
         <h1 className="font-serif text-4xl text-ink">Prep Coach</h1>
         <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-muted">
-          Your last interview surfaced a few weak areas. Here&apos;s the plan to
-          close them — study, drill, talk it through, then run it back.
+          {isSample ? (
+            <>
+              Here&apos;s how the coach works, shown with sample weak areas —
+              finish an interview and open the coach from your report to get
+              your real plan.
+            </>
+          ) : (
+            <>
+              Your interview surfaced a few weak areas. Here&apos;s the plan to
+              close them — study, drill, talk it through, then run it back.
+            </>
+          )}
         </p>
       </div>
 
@@ -77,11 +130,12 @@ export default async function PrepPage() {
               </p>
             </div>
           </div>
-          <Link href="/setup" className="no-underline sm:shrink-0">
-            <Button variant="ink">
-              Start a new mock
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </Button>
+          <Link
+            href="/setup"
+            className={buttonClasses({ className: "sm:shrink-0" })}
+          >
+            Start a new mock
+            <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>
         </div>
       </section>

@@ -27,9 +27,7 @@ class Deps:
     repo: SessionRepository
 
 
-def build_deps(settings: Settings | None = None) -> Deps:
-    """Assemble the dependency bundle (defaults to cached settings)."""
-    settings = settings or get_settings()
+def _assemble(settings: Settings) -> Deps:
     return Deps(
         settings=settings,
         llm=get_llm(settings),
@@ -38,3 +36,21 @@ def build_deps(settings: Settings | None = None) -> Deps:
         knowledge=get_knowledge(settings),
         repo=get_repository(settings),
     )
+
+
+# Cached default bundle: API routes call build_deps() per request, and without
+# this every request rebuilt every adapter INCLUDING a fresh Supabase client
+# (new HTTP connection pool per request). Keyed on the get_settings() instance
+# so clearing the settings cache (tests) transparently invalidates this too.
+_default_deps: Deps | None = None
+
+
+def build_deps(settings: Settings | None = None) -> Deps:
+    """Assemble the dependency bundle (defaults to cached settings + cached deps)."""
+    global _default_deps  # noqa: PLW0603 - module-level cache, see comment above
+    if settings is not None:
+        return _assemble(settings)
+    current = get_settings()
+    if _default_deps is None or _default_deps.settings is not current:
+        _default_deps = _assemble(current)
+    return _default_deps
