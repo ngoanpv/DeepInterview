@@ -14,7 +14,7 @@ Instead, email **security@deepinterview.dev** with:
 
 - a description of the issue and the impact you believe it has;
 - the affected component (`apps/web`, `apps/agent`, `services/lightrag`, `cli`,
-  `packages/shared`, `ee/`, infra, or a dependency);
+  `packages/shared`, infra, or a dependency);
 - step-by-step reproduction instructions or a proof-of-concept; and
 - any relevant logs, requests, or screenshots (please redact secrets and
   personal data).
@@ -64,12 +64,3 @@ codebase and out of git history:
   API keys at all**. Prefer it for local development and CI so you are not
   handling real credentials unless you need to.
 
-## Enterprise (`ee/`) licensing note
-
-Code under the top-level `ee/` directory is **not** part of the AGPLv3 open-source
-core. It is distributed under a **separate commercial license** (see
-[`ee/LICENSE`](ee/LICENSE) and [`ee/README.md`](ee/README.md)). Security reports
-that touch `ee/` are handled through the same `security@deepinterview.dev`
-channel, but any disclosure, redistribution, or reuse of `ee/` code remains
-governed by its commercial license terms rather than the AGPLv3 that covers the
-rest of the repository.

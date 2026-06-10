@@ -16,7 +16,7 @@ export function OpenSource() {
           </h2>
           <p className="mb-[22px] text-base text-muted">
             The full voice pipeline, multi-agent brain and study coach are open
-            under AGPLv3. Bring your own model keys, add a language pack, or
+            under Apache 2.0. Bring your own model keys, add a language pack, or
             contribute back.
           </p>
           <div className="flex flex-wrap gap-3">

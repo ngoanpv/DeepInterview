@@ -6,7 +6,7 @@
 
 ### Practice the interview out loud. Then pass the real one. · Multi-agent · Open source
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-4338CA.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-4338CA.svg)](LICENSE)
 [![Build](https://img.shields.io/github/actions/workflow/status/ngoanpv/DeepInterview/ci.yml?branch=main&label=build)](https://github.com/ngoanpv/DeepInterview/actions)
 [![Release](https://img.shields.io/github/v/release/ngoanpv/DeepInterview?include_prereleases&label=release&color=4338CA)](https://github.com/ngoanpv/DeepInterview/releases)
 [![Stars](https://img.shields.io/github/stars/ngoanpv/DeepInterview?style=social)](https://github.com/ngoanpv/DeepInterview/stargazers)
@@ -36,7 +36,7 @@ DeepInterview closes the **prep ⇄ interview ⇄ feedback** loop: heavy reasoni
 
 ## 🤔 Why DeepInterview
 
-Most interview-prep tools are either chat-only, closed-source, or a per-minute SaaS you can't run yourself. DeepInterview is built differently: it's **voice-first** (you practice out loud, like the real thing), **multilingual** (UI in EN+VI, voice in 7 languages including Vietnamese), and **fully self-hostable** under AGPLv3 with your own provider keys — and it **runs anonymously**: no account, no login, no data leaving your box unless you choose a provider.
+Most interview-prep tools are either chat-only, closed-source, or a per-minute SaaS you can't run yourself. DeepInterview is built differently: it's **voice-first** (you practice out loud, like the real thing), **multilingual** (UI in EN+VI, voice in 7 languages including Vietnamese), and **fully self-hostable** under Apache 2.0 with your own provider keys — and it **runs anonymously**: no account, no login, no data leaving your box unless you choose a provider.
 
 | | **DeepInterview** | Final Round AI | Interview Coder | Generic chat prep |
 |---|:---:|:---:|:---:|:---:|
@@ -45,7 +45,7 @@ Most interview-prep tools are either chat-only, closed-source, or a per-minute S
 | **Self-hostable** | ✅ | ❌ | ❌ | ❌ |
 | **Bring-your-own keys** | ✅ | ❌ | ❌ | ❌ |
 | **Scored, rubric-based** feedback | ✅ | ✅ | ❌ | varies |
-| **Open source** | ✅ AGPLv3 | ❌ | ❌ | mostly ❌ |
+| **Open source** | ✅ Apache-2.0 | ❌ | ❌ | mostly ❌ |
 | Works **without sign-in** | ✅ | ❌ | ❌ | ❌ |
 
 <sub>Competitor columns reflect their publicly advertised positioning at time of writing; check their sites for current details. "Generic chat prep" = ChatGPT-style text Q&A without a voice loop or scored rubric.</sub>
@@ -71,7 +71,7 @@ No tagged release yet — DeepInterview is pre-`v0.1`. Watch [Releases](https://
 - **📚 Prep Coach** *(in progress)* — turns your gaps into an LLM study loop (plan → drills → Socratic chat). Grounded + cited answers are **optional**: set `LIGHTRAG_URL` (or wire a managed RAG behind the same adapter) to ground responses in your own uploaded materials; by default the coach answers honestly without fabricated citations.
 - **🎭 Cost-smart avatars** *(in progress)* — the crossfade system + persona fallbacks are built; pre-rendered **Veo 3.1** idle/speaking loops drop in as the assets land (until then it renders a calm gradient stage). Original anime / superhero / recruiter personas (no named IP), so runtime cost is **CDN-only — no per-minute avatar fees**.
 - **🔌 Provider-agnostic & self-hostable** — a clean adapter layer (LLM / search / embeddings, with a **mock adapter** for offline dev). Bring your own keys (Soniox/Deepgram, Cartesia/ElevenLabs, Gemini/GPT, or OSS faster-whisper / XTTS / Qwen3).
-- **🔓 Open source (AGPLv3)** — self-host the whole thing. Any paid/enterprise-only code is isolated under [`ee/`](ee/README.md).
+- **🔓 Open source (Apache 2.0)** — self-host the whole thing, permissively licensed.
 
 ## 🔊 Provider matrix
 
@@ -160,7 +160,6 @@ flowchart LR
   kb["services/lightrag<br/>knowledge base"]
   shared["packages/shared<br/>TS &lt;-&gt; Pydantic contracts"]
   cli["cli/<br/>first-run setup"]
-  ee["ee/<br/>enterprise (commercial)"]
   UI <--> agent
   agent <--> kb
   shared -.contracts.-> web
@@ -208,11 +207,10 @@ flowchart TB
 
 | Edition | What you get | Auth & billing | Status |
 |---|---|---|---|
-| **Self-host (AGPLv3)** | The whole platform, your keys, your data. Runs **anonymously** — no sign-in. | None required | ✅ Available now (this repo) |
+| **Self-host (Apache 2.0)** | The whole platform, your keys, your data. Runs **anonymously** — no sign-in. | None required | ✅ Available now (this repo) |
 | **Cloud (hosted)** | Managed hosting with accounts + plan tiers, so you skip the ops. | Supabase auth + billing | 🟡 Planned (pre-launch) |
-| **Enterprise (`ee/`)** | SSO / RBAC / audit logging under a separate commercial license, kept out of the AGPL core. | Org SSO | 🟡 Scaffolded |
 
-> The **auth + billing layer is hosted-only** — the open-source self-host runs the full prep → interview → report → coach loop without any account. See [`ee/`](ee/README.md) for the enterprise boundary.
+> The **auth + billing layer is hosted-only** — the open-source self-host runs the full prep → interview → report → coach loop without any account.
 
 ## 📸 Screenshots
 
@@ -252,7 +250,7 @@ If DeepInterview helps your work, please cite it. Full metadata is in [`CITATION
   title  = {DeepInterview: Voice-First, Multilingual AI Mock Interviewer},
   author = {The DeepInterview contributors},
   year   = {2026},
-  license = {AGPL-3.0-only},
+  license = {Apache-2.0},
   url    = {https://github.com/ngoanpv/DeepInterview}
 }
 ```
@@ -261,7 +259,7 @@ If DeepInterview helps your work, please cite it. Full metadata is in [`CITATION
 
 <div align="center">
 
-**License:** [AGPL-3.0-only](LICENSE) for the core · commercial terms for [`ee/`](ee/README.md). · Built in the open 🌍
+**License:** [Apache-2.0](LICENSE) · Built in the open 🌍
 
 [⬆ back to top](#deepinterview-voice-first-multilingual-ai-mock-interviewer)
 

@@ -84,7 +84,7 @@ export default function PricingPage() {
           <div>
             <h3 className="font-medium text-ink">Open-source forever</h3>
             <p className="mt-1 text-[13px] text-muted">
-              The full core is AGPLv3 and{" "}
+              The full core is Apache 2.0 and{" "}
               <Link href="/setup">self-hostable</Link> with your own model keys
               — paid plans are managed convenience.
             </p>

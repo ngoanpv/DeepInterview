@@ -10,7 +10,7 @@ const ITEMS = [
   },
   {
     q: "Is it really free and open source?",
-    a: "Yes. The core is open source under AGPLv3 — self-host it with your own model keys and own your data end to end. Add a language pack or new interviewer persona and contribute it back.",
+    a: "Yes. The core is open source under Apache 2.0 — self-host it with your own model keys and own your data end to end. Add a language pack or new interviewer persona and contribute it back.",
   },
   {
     q: "What are the avatars?",
