@@ -22,11 +22,8 @@
 
 ---
 
-<!-- HERO: a 15–40s GIF of a real voice interview + the scorecard. -->
-<!-- The file is not recorded yet — see assets/README.md (it's the top launch-checklist item). -->
-![DeepInterview demo](assets/demo.gif)
-
-> **demo.gif is a placeholder.** The hero demo is the launch-critical asset and has not been recorded yet — see [`assets/README.md`](assets/README.md).
+<!-- HERO: DeepInterview setup — the main entry point. -->
+![DeepInterview demo](assets/screenshot-setup.png)
 
 > **Upload your CV and a job description. Talk to an AI interviewer. Get scored — and coached on exactly what you missed.** Voice-first, English-first, and multilingual by design.
 
@@ -207,14 +204,6 @@ flowchart TB
 | **Cloud (hosted)** | Managed hosting with accounts + plan tiers, so you skip the ops. | Supabase auth + billing | 🟡 Planned (pre-launch) |
 
 > The **auth + billing layer is hosted-only** — the open-source self-host runs the full prep → interview → report → coach loop without any account.
-
-## Screenshots
-
-> Placeholders — see [`assets/README.md`](assets/README.md). The screens exist (`/setup`, `/interview/[id]`, `/report/[id]`); polished captures land with the demo.
-
-| Setup | Live interview | Report |
-|---|---|---|
-| ![setup](assets/screenshot-setup.png) | ![interview](assets/screenshot-interview.png) | ![report](assets/screenshot-report.png) |
 
 ## Community
 
