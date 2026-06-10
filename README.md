@@ -46,9 +46,11 @@ Practicing in your head (or in a text chat) isn't how interviews work. DeepInter
 
 ## News
 
-> - **[2026.06]** **Early build is up.** Cross-language `InterviewContext` contract (TS ↔ Pydantic) round-trips; prep/live/post pipelines and all web screens run **offline with mock adapters**. Pre-launch.
-> - **[next]** First end-to-end voice interview on real providers (STT→LLM→TTS on LiveKit) + the hero demo GIF.
-> - **[next]** More language packs and the hosted live demo.
+> - **[2026.06]** **Live voice interviews run on real providers.** The full loop — personalized prep (real Gemini CV/JD analysis + company research) → real-time voice interview on LiveKit (Deepgram STT · Gemini · Cartesia/ElevenLabs TTS) → scored report — now runs end to end, with semantic end-of-turn detection and noise-robust, word-gated barge-in.
+> - **[2026.06]** **`docker compose up` verified.** All images build; the base stack (web + agent API + knowledge sidecar) comes up healthy with **zero keys** on mock adapters; `--profile live` adds the voice worker.
+> - **[2026.06]** **Relicensed to Apache 2.0** — permissive core, bring-your-own keys, no sign-in.
+> - **[2026.06]** Early build: cross-language `InterviewContext` contract (TS ↔ Pydantic) round-trips; prep/live/post pipelines and all web screens run offline with mock adapters.
+> - **[next]** The hero demo GIF, hosted live demo, and more language packs.
 
 _(Changelog is intentionally pre-launch and honest — no "1,000 stars" or shipped-feature claims until they're true.)_
 
