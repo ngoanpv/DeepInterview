@@ -14,9 +14,9 @@
 [![pnpm](https://img.shields.io/badge/pnpm-workspace-4338CA.svg)](pnpm-workspace.yaml)
 [![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/fT7Ecbyq)
 
-**🌐 UI in English + Tiếng Việt · voice interviews in 7 languages incl. Vietnamese (more as packs land) · no sign-in required to self-host**
+**UI in English + Tiếng Việt · voice interviews in 7 languages incl. Vietnamese (more as packs land) · no sign-in required to self-host**
 
-[Why](#-why-deepinterview) · [Features](#-features) · [Quickstart](#-quickstart) · [Architecture](#️-architecture) · [Community](#-community) · [Contributing](#-contributing)
+[Why](#why-deepinterview) · [Features](#features) · [Quickstart](#quickstart) · [Architecture](#architecture) · [Community](#community) · [Contributing](#contributing)
 
 </div>
 
@@ -26,7 +26,7 @@
 <!-- The file is not recorded yet — see assets/README.md (it's the top launch-checklist item). -->
 ![DeepInterview demo](assets/demo.gif)
 
-> **🚧 demo.gif is a placeholder.** The hero demo is the launch-critical asset and has not been recorded yet — see [`assets/README.md`](assets/README.md).
+> **demo.gif is a placeholder.** The hero demo is the launch-critical asset and has not been recorded yet — see [`assets/README.md`](assets/README.md).
 
 > **Upload your CV and a job description. Talk to an AI interviewer. Get scored — and coached on exactly what you missed.** Voice-first, English-first, and multilingual by design.
 
@@ -34,40 +34,40 @@ DeepInterview closes the **prep ⇄ interview ⇄ feedback** loop: heavy reasoni
 
 > **Honest status:** this is an **early open build**. The contracts, prep/live/post pipelines, web screens, and CLI are implemented and **run offline with mock adapters** (no API keys, tests green). Real-time voice, web research, and video avatars need provider keys. `docker compose up` brings up the full base stack (web + agent API + knowledge sidecar, healthy with zero keys); the live voice worker runs via `docker compose --profile live up` once LiveKit keys are set. We mark what's done honestly, per feature, throughout this README.
 
-## 🤔 Why DeepInterview
+## Why DeepInterview
 
 Practicing in your head (or in a text chat) isn't how interviews work. DeepInterview is **voice-first** — you answer out loud, in real time, like the real thing — and built to be **owned, not rented**:
 
-- **🎙️ A real conversation, not a form** — a cascaded **STT → LLM → TTS** loop on LiveKit with barge-in, semantic end-of-turn detection, and adaptive follow-ups, so the interviewer reacts to *what you actually said*.
-- **🧠 Prepared like a real interviewer** — before the call it reads your CV + the JD, researches the company, and precomputes a personalized question plan with rubrics; the live loop stays fast because the thinking already happened.
-- **📊 Feedback you can act on** — per-competency rubric scores, model answers, and a study coach that targets exactly the gaps the interview exposed (a closed prep ⇄ interview ⇄ feedback loop).
-- **🌐 Multilingual by design** — UI in EN+VI, voice interviews in 7 languages including Vietnamese; STT/TTS route by language automatically, and each language is a pluggable pack.
-- **🔓 Yours end to end** — Apache 2.0, fully self-hostable, **bring-your-own keys** for every provider (or run 100% offline on mock adapters), and **no sign-in required**: no account, no login, no data leaving your box unless you choose a provider.
+- **A real conversation, not a form** — a cascaded **STT → LLM → TTS** loop on LiveKit with barge-in, semantic end-of-turn detection, and adaptive follow-ups, so the interviewer reacts to *what you actually said*.
+- **Prepared like a real interviewer** — before the call it reads your CV + the JD, researches the company, and precomputes a personalized question plan with rubrics; the live loop stays fast because the thinking already happened.
+- **Feedback you can act on** — per-competency rubric scores, model answers, and a study coach that targets exactly the gaps the interview exposed (a closed prep ⇄ interview ⇄ feedback loop).
+- **Multilingual by design** — UI in EN+VI, voice interviews in 7 languages including Vietnamese; STT/TTS route by language automatically, and each language is a pluggable pack.
+- **Yours end to end** — Apache 2.0, fully self-hostable, **bring-your-own keys** for every provider (or run 100% offline on mock adapters), and **no sign-in required**: no account, no login, no data leaving your box unless you choose a provider.
 
-## 📰 News
+## News
 
-> - **[2026.06]** 🧱 **Early build is up.** Cross-language `InterviewContext` contract (TS ↔ Pydantic) round-trips; prep/live/post pipelines and all web screens run **offline with mock adapters**. Pre-launch.
-> - **[next]** 🎙️ First end-to-end voice interview on real providers (STT→LLM→TTS on LiveKit) + the hero demo GIF.
-> - **[next]** 🌐 More language packs and the hosted live demo.
+> - **[2026.06]** **Early build is up.** Cross-language `InterviewContext` contract (TS ↔ Pydantic) round-trips; prep/live/post pipelines and all web screens run **offline with mock adapters**. Pre-launch.
+> - **[next]** First end-to-end voice interview on real providers (STT→LLM→TTS on LiveKit) + the hero demo GIF.
+> - **[next]** More language packs and the hosted live demo.
 
 _(Changelog is intentionally pre-launch and honest — no "1,000 stars" or shipped-feature claims until they're true.)_
 
-## 📦 Releases
+## Releases
 
 No tagged release yet — DeepInterview is pre-`v0.1`. Watch [Releases](https://github.com/ngoanpv/DeepInterview/releases) and the News section above. Citation metadata lives in [`CITATION.cff`](CITATION.cff).
 
-## ✨ Features
+## Features
 
-- **🎙️ Real-time voice interview** — cascaded **STT → LLM → TTS** on LiveKit (not speech-to-speech), so you get a full transcript, per-component control, and predictable cost. Barge-in and seeded follow-ups keep it conversational.
-- **🌐 English-first & multilingual** — every user-facing string is i18n'd (UI shipped in EN + VI); language is a per-session setting and the voice pipeline routes STT/TTS by language (see the [provider matrix](#-provider-matrix) below). Each language is a pluggable "pack."
-- **🧠 Personalized prep** — a LangGraph pipeline reads your CV + the JD, researches the target company, diffs the gap, and a **Question Planner** precomputes the plan, difficulty curve, rubrics, and seeded follow-ups — so the live loop stays fast. Uploaded **CV documents (PDF/DOCX) are parsed to text server-side with [Microsoft markitdown](https://github.com/microsoft/markitdown), with a Gemini multimodal fallback for scanned/image PDFs**.
-- **📊 Scored feedback** — a rubric-based evaluator + language coach write a per-competency `ScoreCard` with strengths, gaps, model answers, and next steps that map straight back to the questions you were asked.
-- **📚 Prep Coach** *(in progress)* — turns your gaps into an LLM study loop (plan → drills → Socratic chat). Grounded + cited answers are **optional**: set `LIGHTRAG_URL` (or wire a managed RAG behind the same adapter) to ground responses in your own uploaded materials; by default the coach answers honestly without fabricated citations.
-- **🎭 Cost-smart avatars** *(in progress)* — the crossfade system + persona fallbacks are built; pre-rendered **Veo 3.1** idle/speaking loops drop in as the assets land (until then it renders a calm gradient stage). Original anime / superhero / recruiter personas (no named IP), so runtime cost is **CDN-only — no per-minute avatar fees**.
-- **🔌 Provider-agnostic & self-hostable** — a clean adapter layer (LLM / search / embeddings, with a **mock adapter** for offline dev). Bring your own keys (Soniox/Deepgram, Cartesia/ElevenLabs, Gemini/GPT, or OSS faster-whisper / XTTS / Qwen3).
-- **🔓 Open source (Apache 2.0)** — self-host the whole thing, permissively licensed.
+- **Real-time voice interview** — cascaded **STT → LLM → TTS** on LiveKit (not speech-to-speech), so you get a full transcript, per-component control, and predictable cost. Barge-in and seeded follow-ups keep it conversational.
+- **English-first & multilingual** — every user-facing string is i18n'd (UI shipped in EN + VI); language is a per-session setting and the voice pipeline routes STT/TTS by language (see the [provider matrix](#provider-matrix) below). Each language is a pluggable "pack."
+- **Personalized prep** — a LangGraph pipeline reads your CV + the JD, researches the target company, diffs the gap, and a **Question Planner** precomputes the plan, difficulty curve, rubrics, and seeded follow-ups — so the live loop stays fast. Uploaded **CV documents (PDF/DOCX) are parsed to text server-side with [Microsoft markitdown](https://github.com/microsoft/markitdown), with a Gemini multimodal fallback for scanned/image PDFs**.
+- **Scored feedback** — a rubric-based evaluator + language coach write a per-competency `ScoreCard` with strengths, gaps, model answers, and next steps that map straight back to the questions you were asked.
+- **Prep Coach** *(in progress)* — turns your gaps into an LLM study loop (plan → drills → Socratic chat). Grounded + cited answers are **optional**: set `LIGHTRAG_URL` (or wire a managed RAG behind the same adapter) to ground responses in your own uploaded materials; by default the coach answers honestly without fabricated citations.
+- **Cost-smart avatars** *(in progress)* — the crossfade system + persona fallbacks are built; pre-rendered **Veo 3.1** idle/speaking loops drop in as the assets land (until then it renders a calm gradient stage). Original anime / superhero / recruiter personas (no named IP), so runtime cost is **CDN-only — no per-minute avatar fees**.
+- **Provider-agnostic & self-hostable** — a clean adapter layer (LLM / search / embeddings, with a **mock adapter** for offline dev). Bring your own keys (Soniox/Deepgram, Cartesia/ElevenLabs, Gemini/GPT, or OSS faster-whisper / XTTS / Qwen3).
+- **Open source (Apache 2.0)** — self-host the whole thing, permissively licensed.
 
-## 🔊 Provider matrix
+## Provider matrix
 
 **Every stage is swappable — bring your own vendor.** The live voice loop is **cascaded STT → LLM → TTS** over LiveKit; you pick each vendor with a single env var (`STT_PROVIDER` / `TTS_PROVIDER` / `LLM_PROVIDER`) plus its key. No code changes, no vendor lock-in — providers sit behind a clean adapter interface, and adding a new one is a small PR (see [CONTRIBUTING.md](CONTRIBUTING.md)). With no keys set, every stage falls back to an offline **mock adapter** so the full loop runs in CI and on day-one clones.
 
@@ -79,11 +79,11 @@ No tagged release yet — DeepInterview is pre-`v0.1`. Watch [Releases](https://
 
 > **Language routing is automatic — not something you configure.** If your chosen TTS doesn't cover the session language (e.g., Vietnamese on Cartesia), the agent reroutes that session to ElevenLabs or Gemini TTS when a key is present. Cartesia covers en, es, zh, fr, de, ja, pt, hi, it, ko, nl, pl, ru, sv, tr; Deepgram nova-3 covers English + many languages (Vietnamese validation in progress).
 
-## 🚀 Quickstart
+## Quickstart
 
-> **🔓 No sign-in required.** The OSS self-host runs **anonymously** — setup, the live interview, and the report all work with **no account and no login**. (The report reads directly from the agent API.) Supabase auth + billing are a **hosted-only** layer; you don't need them to run the loop yourself.
+> **No sign-in required.** The OSS self-host runs **anonymously** — setup, the live interview, and the report all work with **no account and no login**. (The report reads directly from the agent API.) Supabase auth + billing are a **hosted-only** layer; you don't need them to run the loop yourself.
 >
-> **⚡ Zero-upload demo:** the `/setup` screen has a one-click **Quick demo** that fills a sample CV + JD, so you can try the whole loop without uploading anything.
+> **Zero-upload demo:** the `/setup` screen has a one-click **Quick demo** that fills a sample CV + JD, so you can try the whole loop without uploading anything.
 
 **Requirements:** Node **20+** (22 recommended — see [`.nvmrc`](.nvmrc)) · pnpm 11 · Python 3.11+ with [uv](https://docs.astral.sh/uv/) (for the agent) · Docker (for the full stack).
 
@@ -133,7 +133,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full dev setup and the provider-a
 
 </details>
 
-## 🏗️ Architecture
+## Architecture
 
 The spine of the system is a **prep / live / post** split (strong async models before and after the call; one lean fast model on the live turn path). All three phases thread a single shared `InterviewContext` "blackboard" — written in prep, read+appended in live, read in post.
 
@@ -197,7 +197,7 @@ flowchart TB
 
 **Module boundaries:** `apps/web` owns UI/auth/upload/token and knows nothing about LLM/STT/TTS · `apps/agent` owns the voice loop + prep/post pipelines + avatar render util · `services/lightrag` owns the knowledge base · `cli/` owns first-run setup · **`packages/shared` is the cross-language contract** (TS source of truth, mirrored as Pydantic). See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and the full spec in [`site/AI-Interviewer-Build-Handoff.md`](site/AI-Interviewer-Build-Handoff.md).
 
-## 📦 Using DeepInterview
+## Using DeepInterview
 
 | Edition | What you get | Auth & billing | Status |
 |---|---|---|---|
@@ -206,7 +206,7 @@ flowchart TB
 
 > The **auth + billing layer is hosted-only** — the open-source self-host runs the full prep → interview → report → coach loop without any account.
 
-## 📸 Screenshots
+## Screenshots
 
 > Placeholders — see [`assets/README.md`](assets/README.md). The screens exist (`/setup`, `/interview/[id]`, `/report/[id]`); polished captures land with the demo.
 
@@ -214,28 +214,28 @@ flowchart TB
 |---|---|---|
 | ![setup](assets/screenshot-setup.png) | ![interview](assets/screenshot-interview.png) | ![report](assets/screenshot-report.png) |
 
-## 🌐 Community
+## Community
 
-- 💬 **[Discord](https://discord.gg/fT7Ecbyq)** — join the build-in-public chat.
-- 🗣️ **[GitHub Discussions](https://github.com/ngoanpv/DeepInterview/discussions)** — questions, ideas, language-pack requests.
-- 🐛 **[Issues](https://github.com/ngoanpv/DeepInterview/issues)** — bugs & features (templates provided).
+- **[Discord](https://discord.gg/fT7Ecbyq)** — join the build-in-public chat.
+- **[GitHub Discussions](https://github.com/ngoanpv/DeepInterview/discussions)** — questions, ideas, language-pack requests.
+- **[Issues](https://github.com/ngoanpv/DeepInterview/issues)** — bugs & features (templates provided).
 
 Built in the open. We respond to issues — ghosting contributors is the #1 cause of OSS death, and we don't intend to.
 
-## 🤝 Contributing
+## Contributing
 
 We'd love your help — especially **language packs**, **provider adapters**, and **accessibility**. Start with:
 
-- 📖 [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup, the monorepo map, the work-package model, the provider-adapter (mock-first) pattern, and how to run **offline with no keys**.
-- 🌱 [Good first issues](docs/GOOD_FIRST_ISSUES.md) — concrete, scoped tasks drawn from real gaps.
-- 📜 [Code of Conduct](CODE_OF_CONDUCT.md) · 🔒 [Security policy](SECURITY.md).
+- [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup, the monorepo map, the work-package model, the provider-adapter (mock-first) pattern, and how to run **offline with no keys**.
+- [Good first issues](docs/GOOD_FIRST_ISSUES.md) — concrete, scoped tasks drawn from real gaps.
+- [Code of Conduct](CODE_OF_CONDUCT.md) · [Security policy](SECURITY.md).
 
 <!-- Contributor mosaic — populates after the repo is public (contrib.rocks reads the public contributor list). -->
 [![Contributors](https://contrib.rocks/image?repo=ngoanpv/DeepInterview)](https://github.com/ngoanpv/DeepInterview/graphs/contributors)
 
 > _The mosaic above renders once the repo is public and has contributors._
 
-## 📖 Citation
+## Citation
 
 If DeepInterview helps your work, please cite it. Full metadata is in [`CITATION.cff`](CITATION.cff).
 
@@ -253,8 +253,8 @@ If DeepInterview helps your work, please cite it. Full metadata is in [`CITATION
 
 <div align="center">
 
-**License:** [Apache-2.0](LICENSE) · Built in the open 🌍
+**License:** [Apache-2.0](LICENSE) · Built in the open
 
-[⬆ back to top](#deepinterview-voice-first-multilingual-ai-mock-interviewer)
+[back to top](#deepinterview-voice-first-multilingual-ai-mock-interviewer)
 
 </div>
