@@ -4,7 +4,7 @@
 
 # DeepInterview: Voice-First, Multilingual AI Mock Interviewer
 
-### Practice the interview out loud. Then pass the real one. · English-first · Open source
+### Practice the interview out loud. Then pass the real one. · Multi-agent · Open source
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-4338CA.svg)](LICENSE)
 [![Build](https://img.shields.io/github/actions/workflow/status/ngoanpv/DeepInterview/ci.yml?branch=main&label=build)](https://github.com/ngoanpv/DeepInterview/actions)
