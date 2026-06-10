@@ -3,7 +3,7 @@
 > Entry point for Claude Code. Read this first, then `site/AI-Interviewer-Build-Handoff.md` (the technical spec). Build in the order defined there.
 
 ## What we're building
-**DeepInterview** — an open-source (AGPLv3), voice-first AI mock-interview platform. It reads a candidate's CV + a job description, researches the target company, runs an adaptive **real-time voice interview** with a stylized video avatar, scores it, then routes the user into a study coach that teaches weak areas — a closed prep ⇄ interview ⇄ feedback loop. **English-first, multilingual (10+ languages).**
+**DeepInterview** — an open-source (Apache-2.0), voice-first AI mock-interview platform. It reads a candidate's CV + a job description, researches the target company, runs an adaptive **real-time voice interview** with a stylized video avatar, scores it, then routes the user into a study coach that teaches weak areas — a closed prep ⇄ interview ⇄ feedback loop. **English-first, multilingual (10+ languages).**
 
 ## Source-of-truth docs (read in this order)
 1. **`site/AI-Interviewer-Build-Handoff.md`** — THE spec. Architecture, prep/live/post phases, recommended stack + OSS alternatives, multi-agent design, the shared `InterviewContext` contract, Veo avatar prompts, **§16 = agent work packages (WP-0…WP-13) with interface contracts, acceptance criteria, and a dependency graph. Start coding from §16.**
@@ -19,7 +19,7 @@
 4. **Cascaded STT→LLM→TTS** (not speech-to-speech) for transcripts + per-component control.
 5. **Cost discipline.** Voice has real marginal cost (~$0.50–1.00 per 15-min interview until optimized). Enforce the per-tier interview cap in code; never ship a literally-unlimited voice plan.
 6. **Re-verify before wiring billing or pinning models** — prices/model versions in the docs are June-2026 estimates (see handoff §17).
-7. **License:** AGPLv3 core; keep any paid/enterprise-only code in a separate `/ee` directory under a commercial license. Don't move core features out of OSS.
+7. **License:** Apache-2.0 core. Enterprise features are developed in a separate **private** repo — never in this one. Don't move core features out of OSS.
 8. **Secrets** via env vars only (`.env`, never committed). Provide `.env.example`.
 
 ## Target stack (per the handoff — confirm latest at build time)
@@ -48,7 +48,6 @@ deepinterview/
 ├── scripts/                # setup / dev / release scripts
 ├── tests/                  # cross-cutting / e2e tests
 ├── site/                   # docs site (move the *.md spec files here)
-├── ee/                     # enterprise-only (SSO/RBAC/audit) — commercial license
 ├── docker-compose.yml      # `docker compose up` runs the full stack
 ├── .env.example  CITATION.cff  .dockerignore
 └── turbo.json · pnpm-workspace.yaml · package.json
@@ -60,7 +59,7 @@ deepinterview/
 - **P1:** WP-6 prep pipeline + WP-5 live interviewer + WP-1 setup UI → real CV+JD → personalized 15-min voice interview, transcript saved.
 - **P2:** WP-7 scoring + WP-3 report UI + WP-9 avatars.
 - **P3:** WP-8 knowledge service + WP-4 Prep Coach UI (the loop).
-- **P4:** WP-13 OSS launch assets. **P5:** WP-11 payments/gating. **P6:** `/ee` enterprise.
+- **P4:** WP-13 OSS launch assets. **P5:** WP-11 payments/gating.
 
 ## Commands (fill in as you scaffold)
 ```bash

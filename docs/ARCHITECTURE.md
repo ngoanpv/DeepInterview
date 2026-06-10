@@ -9,7 +9,7 @@ DeepInterview is a voice-first AI mock-interview platform: it reads a
 candidate's CV + a job description, researches the target company, runs an
 adaptive real-time voice interview with a stylized avatar, scores it, then
 routes the user into a study coach that teaches weak areas — a closed
-prep ⇄ interview ⇄ feedback loop. English-first, multilingual, AGPLv3.
+prep ⇄ interview ⇄ feedback loop. English-first, multilingual, Apache-2.0.
 
 ## The prep / live / post split
 
@@ -134,7 +134,6 @@ deepinterview/
 ├── services/lightrag/       # knowledge sidecar (FastAPI, :9621) — /kb/ingest, /kb/query
 ├── cli/                     # developer/operator CLI
 ├── skills/                  # versioned company playbooks + rubrics (Markdown + YAML)
-├── ee/                      # enterprise-only (SEPARATE COMMERCIAL LICENSE — not AGPLv3)
 └── docs/ · site/            # these docs · source-of-truth spec + landing reference
 ```
 

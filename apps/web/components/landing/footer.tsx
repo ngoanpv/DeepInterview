@@ -77,7 +77,7 @@ export function Footer() {
           <FooterCol title="Community" links={COMMUNITY_LINKS} />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-line pt-[22px] text-[13px] text-faint">
-          <span>© 2026 DeepInterview · AGPLv3</span>
+          <span>© 2026 DeepInterview · Apache 2.0</span>
           <span className="font-mono">Built in the open</span>
         </div>
       </Container>

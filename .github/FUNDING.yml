@@ -1,6 +1,6 @@
 # Funding sources for DeepInterview.
 #
-# DeepInterview is AGPLv3 open-source software. Sponsorships fund the voice
+# DeepInterview is Apache-2.0 open-source software. Sponsorships fund the voice
 # infrastructure (LiveKit / STT / TTS / LLM) that makes free mock interviews
 # possible. Uncomment and fill in a line once the corresponding account exists —
 # leaving placeholder usernames active renders broken "Sponsor" buttons.

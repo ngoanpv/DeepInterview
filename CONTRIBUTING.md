@@ -62,7 +62,6 @@ pnpm + Turborepo. The TS **web** and Python **agent** are co-equal runtimes that
 | `scripts/` | Setup / dev / release scripts, incl. `scripts/veo/` (avatar prompts + render). | mixed |
 | `tests/` | Cross-cutting / e2e tests. | mixed |
 | `site/` | The spec docs (`AI-Interviewer-Build-Handoff.md` is the source of truth). | Markdown |
-| `ee/` | **Enterprise-only** code (SSO/RBAC/audit) under a **commercial** license — kept out of the AGPL core. | mixed |
 
 **Cross-language rule:** Python cannot import the TS package, so `packages/shared` is the TS source of truth and the Pydantic models mirror it **field-for-field**. A parity check test enforces this — if you change a contract, update both sides and the parity test will tell you if they drift.
 
@@ -115,7 +114,7 @@ This is the cleanest first contribution — see the good-first-issues for a work
 
 ## 6. Licensing, DCO sign-off & the `/ee` boundary
 
-- **Core is [AGPL-3.0-only](LICENSE).** By contributing to the core you agree your contribution is licensed under AGPLv3.
+- **The project is [Apache-2.0](LICENSE).** By contributing you agree your contribution is licensed under Apache 2.0.
 - **Sign off your commits (DCO).** We use the lightweight [Developer Certificate of Origin](https://developercertificate.org/) instead of a CLA — no paperwork, no bot. Just add a `Signed-off-by` line by committing with the `-s` flag:
 
   ```bash
@@ -123,7 +122,6 @@ This is the cleanest first contribution — see the good-first-issues for a work
   ```
 
   This certifies you wrote the change (or have the right to submit it) under the project's license. Forgot it on an existing commit? `git commit --amend -s` (or `git rebase --signoff` for a range), then force-push your branch.
-- **Do not move core features into `ee/`.** `ee/` is reserved for genuinely enterprise-only concerns (SSO, RBAC, audit logging) under a separate commercial license. Anything a self-hoster needs to run a useful interview stays in the AGPL core.
 - **Never commit secrets.** Keys live in `.env` only (gitignored). See [SECURITY.md](SECURITY.md).
 
 ---
