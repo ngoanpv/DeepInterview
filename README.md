@@ -12,7 +12,7 @@
 [![Stars](https://img.shields.io/github/stars/ngoanpv/DeepInterview?style=social)](https://github.com/ngoanpv/DeepInterview/stargazers)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-4338CA.svg)](apps/agent)
 [![pnpm](https://img.shields.io/badge/pnpm-workspace-4338CA.svg)](pnpm-workspace.yaml)
-[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](#-community)
+[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/fT7Ecbyq)
 
 **🌐 UI in English + Tiếng Việt · voice interviews in 7 languages incl. Vietnamese (more as packs land) · no sign-in required to self-host**
 
@@ -224,7 +224,7 @@ flowchart TB
 
 ## 🌐 Community
 
-- 💬 **Discord** — join the build-in-public chat _(invite link TBD — opens at launch)_.
+- 💬 **[Discord](https://discord.gg/fT7Ecbyq)** — join the build-in-public chat.
 - 🗣️ **[GitHub Discussions](https://github.com/ngoanpv/DeepInterview/discussions)** — questions, ideas, language-pack requests.
 - 🐛 **[Issues](https://github.com/ngoanpv/DeepInterview/issues)** — bugs & features (templates provided).
 
