@@ -75,15 +75,15 @@ No tagged release yet — DeepInterview is pre-`v0.1`. Watch [Releases](https://
 
 ## 🔊 Provider matrix
 
-The live voice loop is **cascaded STT → LLM → TTS** over LiveKit, with each stage chosen by a `*_PROVIDER` env var. With no keys set, every stage falls back to an offline **mock adapter** so the full loop runs in CI and on day-one clones.
+**Every stage is swappable — bring your own vendor.** The live voice loop is **cascaded STT → LLM → TTS** over LiveKit; you pick each vendor with a single env var (`STT_PROVIDER` / `TTS_PROVIDER` / `LLM_PROVIDER`) plus its key. No code changes, no vendor lock-in — providers sit behind a clean adapter interface, and adding a new one is a small PR (see [CONTRIBUTING.md](CONTRIBUTING.md)). With no keys set, every stage falls back to an offline **mock adapter** so the full loop runs in CI and on day-one clones.
 
-| Stage | Default provider(s) | Notes | OSS / offline fallback |
+| Stage | Choose with | Vendors (pick one) | No key set |
 |---|---|---|---|
-| **STT** | Deepgram **nova-3** | English + many languages; Vietnamese on nova-3 is being validated. Soniox = BYO alternative. | mock adapter (faster-whisper planned) |
-| **TTS** | Cartesia **sonic** | en, es, zh, fr, de, ja, pt, hi, it, ko, nl, pl, ru, sv, tr | mock adapter (XTTS planned) |
-| **TTS** | ElevenLabs **Flash v2.5** | **Vietnamese** + other non-Cartesia languages | — |
-| **TTS** | Gemini TTS | fallback when no ElevenLabs key is set | — |
-| **LLM** | Gemini (live tier) / OpenAI | live + prep/post reasoning | mock adapter (Qwen3 planned) |
+| **STT** | `STT_PROVIDER` | **Deepgram nova-3** (default) · Soniox | mock adapter (faster-whisper planned) |
+| **TTS** | `TTS_PROVIDER` | **Cartesia sonic** (default) · ElevenLabs Flash v2.5 · Gemini TTS | mock adapter (XTTS planned) |
+| **LLM** | `LLM_PROVIDER` | **Gemini live tier** (default) · OpenAI | mock adapter (Qwen3 planned) |
+
+> **Language routing is automatic — not something you configure.** If your chosen TTS doesn't cover the session language (e.g., Vietnamese on Cartesia), the agent reroutes that session to ElevenLabs or Gemini TTS when a key is present. Cartesia covers en, es, zh, fr, de, ja, pt, hi, it, ko, nl, pl, ru, sv, tr; Deepgram nova-3 covers English + many languages (Vietnamese validation in progress).
 
 ## 🚀 Quickstart
 
@@ -99,7 +99,7 @@ This is what's tested in CI today. It builds the contracts, runs the test suites
 
 ```bash
 git clone https://github.com/ngoanpv/DeepInterview.git
-cd deepinterview
+cd DeepInterview
 
 pnpm install          # install the JS/TS workspace
 pnpm build            # build packages/shared (contracts) + cli + web
