@@ -206,28 +206,42 @@ def build_tts(settings, language="en"):  # noqa: ANN001, ANN201
     return cartesia.TTS(language=lang)
 
 
-def build_turn_handling() -> dict:
+# Languages the LiveKit multilingual end-of-turn model can judge semantically.
+# Vietnamese is NOT among them — for unsupported languages the session falls
+# back to silence-based endpointing, where the default 0.5s cutoff chops
+# natural mid-sentence pauses into separate turns (confirmed in vi testing:
+# fragmented one-clause "answers" with the agent jumping in between).
+_EOU_MODEL_LANGS = frozenset(
+    {"en", "es", "fr", "de", "it", "pt", "nl", "zh", "ja", "ko", "id", "tr", "ru"}
+)
+
+
+def build_turn_handling(language: str = "en") -> dict:
     """Turn-handling config shared by the interview and coach sessions.
 
-    Two noisy-environment defenses on top of the SDK defaults:
+    Defenses on top of the SDK defaults:
 
     * ``min_words: 3`` — an interruption only registers once the candidate has
       actually SAID a few transcribed words. The default (0) lets raw VAD
       energy interrupt, so a door slam or background chatter cuts the
       interviewer off mid-sentence.
-    * Semantic end-of-turn (``MultilingualModel``) — "is the candidate done?"
-      is judged from the transcript instead of waiting for clean silence,
-      which ambient noise can otherwise hold open indefinitely (the agent
-      looks stuck in "listening"). Falls back to default VAD/STT endpointing
-      when the plugin or its model files are unavailable.
+    * Semantic end-of-turn (``MultilingualModel``) for languages it supports —
+      "is the candidate done?" is judged from the transcript instead of
+      waiting for clean silence.
+    * For languages the model can't judge (e.g. Vietnamese): stretch the
+      silence endpointing window instead (1.2s min / 4s max) so natural
+      pauses don't end the candidate's turn mid-sentence.
     """
     handling: dict = {"interruption": {"min_words": 3}}
-    try:
-        from livekit.plugins.turn_detector.multilingual import MultilingualModel  # noqa: PLC0415
+    if language in _EOU_MODEL_LANGS:
+        try:
+            from livekit.plugins.turn_detector.multilingual import MultilingualModel  # noqa: PLC0415
 
-        handling["turn_detection"] = MultilingualModel()
-    except Exception:  # noqa: BLE001 - optional model; endpointing still works without it
-        log.warning("build_turn_handling: turn-detector unavailable; using VAD/STT endpointing")
+            handling["turn_detection"] = MultilingualModel()
+            return handling
+        except Exception:  # noqa: BLE001 - optional model; fall through to endpointing
+            log.warning("build_turn_handling: turn-detector unavailable; using endpointing")
+    handling["endpointing"] = {"min_delay": 1.2, "max_delay": 4.0}
     return handling
 
 
@@ -350,7 +364,7 @@ async def entrypoint(ctx: JobContext) -> None:
         # Lean live loop: preemptive generation is on by default in 1.5.x;
         # turn_handling adds the noisy-environment defenses (semantic
         # end-of-turn + word-gated interruptions — see build_turn_handling).
-        turn_handling=build_turn_handling(),
+        turn_handling=build_turn_handling(lang_mode.primary),
     )
 
     # Persisted transcript = real committed turns (STT + agent speech), not

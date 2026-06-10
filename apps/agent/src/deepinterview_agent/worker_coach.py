@@ -92,7 +92,7 @@ async def entrypoint(ctx: JobContext) -> None:
         # Same noisy-environment defenses as the interview worker (semantic
         # end-of-turn + word-gated interruptions); preemptive generation is on
         # by default in 1.5.x.
-        turn_handling=build_turn_handling(),
+        turn_handling=build_turn_handling(primary),
     )
 
     # Capture the real coach conversation (CoachAgent has no tools, so nothing
