@@ -104,6 +104,14 @@ class Settings(BaseSettings):
     enable_score_verifier: bool = False
     score_verifier_timeout_sec: float = 60.0
 
+    # --- live: BVC noise cancellation (opt-in) --------------------------------
+    # OFF by default: the BVC native filter failed to initialize inside the
+    # slim arm64 container ("failed to initialize the audio filter") and took
+    # the whole input audio stream down with it — the agent heard nothing.
+    # Enable with ENABLE_BVC=true only on hosts where it's verified to load.
+    # Noise robustness without it: semantic turn detector + min_words gate.
+    enable_bvc: bool = False
+
     # --- live cost / duration guard (Golden Rule #5: cap voice in code) -------
     # Hard ceilings enforced by the worker's SessionGuard so a live room can
     # never run unbounded (a stalled/looping LLM would otherwise burn voice
