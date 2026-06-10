@@ -23,6 +23,15 @@ const sizes: Record<Size, string> = {
   lg: "text-[15px] px-6 py-3",
 };
 
+/** Button styles as a class string — for `<a>`/`<Link>` that should look like a Button. */
+export function buttonClasses({
+  variant = "ink",
+  size = "md",
+  className,
+}: { variant?: Variant; size?: Size; className?: string } = {}) {
+  return cn(base, variants[variant], sizes[size], className);
+}
+
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
@@ -37,7 +46,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         type={type}
-        className={cn(base, variants[variant], sizes[size], className)}
+        className={buttonClasses({ variant, size, className })}
         {...props}
       />
     );
