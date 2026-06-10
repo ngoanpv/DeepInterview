@@ -189,15 +189,18 @@ def build_turn_handling() -> dict:
 
 
 def build_room_options(settings):  # noqa: ANN001, ANN201
-    """Room I/O options: BVC noise cancellation when running on LiveKit Cloud.
+    """Room I/O options: BVC noise cancellation, strictly opt-in (ENABLE_BVC).
 
-    BVC strips background noise BEFORE VAD/STT see it — the root fix for noise
-    holding the turn open. It is a LiveKit Cloud feature, so it is enabled only
-    for *.livekit.cloud URLs; self-hosted deployments get plain mic audio.
-    Returns None (SDK defaults) when unavailable.
+    BVC strips background noise BEFORE VAD/STT see it, but its native filter
+    failed to initialize in the slim arm64 container and the input audio
+    stream it was attached to delivered NO frames — the agent heard nothing
+    for the whole session. So it is off unless ENABLE_BVC=true AND the
+    deployment is LiveKit Cloud (BVC is a Cloud feature). Noise robustness
+    otherwise comes from the semantic turn detector + min_words gate.
+    Returns None (SDK defaults) when not enabled.
     """
     url = settings.livekit_url or ""
-    if "livekit.cloud" not in url:
+    if not settings.enable_bvc or "livekit.cloud" not in url:
         return None
     try:
         from livekit.agents.voice.room_io import AudioInputOptions, RoomOptions  # noqa: PLC0415
