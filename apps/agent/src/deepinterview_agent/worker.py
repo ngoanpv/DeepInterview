@@ -163,6 +163,52 @@ def build_tts(settings, language="en"):  # noqa: ANN001, ANN201
     return cartesia.TTS(language=lang)
 
 
+def build_turn_handling() -> dict:
+    """Turn-handling config shared by the interview and coach sessions.
+
+    Two noisy-environment defenses on top of the SDK defaults:
+
+    * ``min_words: 3`` — an interruption only registers once the candidate has
+      actually SAID a few transcribed words. The default (0) lets raw VAD
+      energy interrupt, so a door slam or background chatter cuts the
+      interviewer off mid-sentence.
+    * Semantic end-of-turn (``MultilingualModel``) — "is the candidate done?"
+      is judged from the transcript instead of waiting for clean silence,
+      which ambient noise can otherwise hold open indefinitely (the agent
+      looks stuck in "listening"). Falls back to default VAD/STT endpointing
+      when the plugin or its model files are unavailable.
+    """
+    handling: dict = {"interruption": {"min_words": 3}}
+    try:
+        from livekit.plugins.turn_detector.multilingual import MultilingualModel  # noqa: PLC0415
+
+        handling["turn_detection"] = MultilingualModel()
+    except Exception:  # noqa: BLE001 - optional model; endpointing still works without it
+        log.warning("build_turn_handling: turn-detector unavailable; using VAD/STT endpointing")
+    return handling
+
+
+def build_room_options(settings):  # noqa: ANN001, ANN201
+    """Room I/O options: BVC noise cancellation when running on LiveKit Cloud.
+
+    BVC strips background noise BEFORE VAD/STT see it — the root fix for noise
+    holding the turn open. It is a LiveKit Cloud feature, so it is enabled only
+    for *.livekit.cloud URLs; self-hosted deployments get plain mic audio.
+    Returns None (SDK defaults) when unavailable.
+    """
+    url = settings.livekit_url or ""
+    if "livekit.cloud" not in url:
+        return None
+    try:
+        from livekit.agents.voice.room_io import AudioInputOptions, RoomOptions  # noqa: PLC0415
+        from livekit.plugins import noise_cancellation  # noqa: PLC0415
+
+        return RoomOptions(audio_input=AudioInputOptions(noise_cancellation=noise_cancellation.BVC()))
+    except Exception:  # noqa: BLE001 - optional plugin; raw audio still works
+        log.warning("build_room_options: noise-cancellation unavailable; using raw mic audio")
+        return None
+
+
 def build_vad(proc: JobProcess | None = None):  # noqa: ANN201
     """Return the Silero VAD, preferring the prewarmed per-process instance."""
     if proc is not None and "vad" in proc.userdata:
@@ -255,9 +301,10 @@ async def entrypoint(ctx: JobContext) -> None:
         llm=build_llm(settings),
         tts=build_tts(settings, lang_mode.primary),
         vad=build_vad(ctx.proc),
-        # Lean live loop: low-latency turns. Turn detection is on by default in
-        # 1.x; preemptive generation starts the LLM before end-of-turn settles.
-        preemptive_generation=True,
+        # Lean live loop: preemptive generation is on by default in 1.5.x;
+        # turn_handling adds the noisy-environment defenses (semantic
+        # end-of-turn + word-gated interruptions — see build_turn_handling).
+        turn_handling=build_turn_handling(),
     )
 
     # Persisted transcript = real committed turns (STT + agent speech), not
@@ -382,9 +429,12 @@ async def entrypoint(ctx: JobContext) -> None:
 
     ctx.add_shutdown_callback(_on_shutdown)
 
+    room_options = build_room_options(settings)
+    start_kwargs = {"room_options": room_options} if room_options is not None else {}
     await session.start(
         agent=Interviewer(userdata),
         room=ctx.room,
+        **start_kwargs,
     )
 
     # Start the guard only once the session is live (it calls session.say /

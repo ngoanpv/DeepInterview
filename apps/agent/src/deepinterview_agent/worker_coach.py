@@ -50,8 +50,10 @@ from .worker import (
     _load_context_via_api,
     _session_id_from_room,
     build_llm,
+    build_room_options,
     build_stt,
     build_tts,
+    build_turn_handling,
     build_vad,
     wire_transcript_capture,
 )
@@ -87,7 +89,10 @@ async def entrypoint(ctx: JobContext) -> None:
         llm=build_llm(settings),
         tts=build_tts(settings, primary),
         vad=build_vad(),
-        preemptive_generation=True,
+        # Same noisy-environment defenses as the interview worker (semantic
+        # end-of-turn + word-gated interruptions); preemptive generation is on
+        # by default in 1.5.x.
+        turn_handling=build_turn_handling(),
     )
 
     # Capture the real coach conversation (CoachAgent has no tools, so nothing
@@ -114,12 +119,15 @@ async def entrypoint(ctx: JobContext) -> None:
 
     ctx.add_shutdown_callback(_on_shutdown)
 
+    room_options = build_room_options(settings)
+    start_kwargs = {"room_options": room_options} if room_options is not None else {}
     await session.start(
         agent=CoachAgent(
             weak_areas_summary=summary,
             lang=primary,
         ),
         room=ctx.room,
+        **start_kwargs,
     )
 
     guard.start()

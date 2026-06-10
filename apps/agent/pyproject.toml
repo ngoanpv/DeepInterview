@@ -34,6 +34,12 @@ livekit = [
     "livekit-plugins-elevenlabs>=1.5",
     "livekit-plugins-google>=1.5",
     "livekit-plugins-openai>=1.5",
+    # Noisy-environment robustness: BVC noise cancellation (LiveKit Cloud) so
+    # background noise can't hold the turn open, + the semantic end-of-turn
+    # model so "is the candidate done?" is judged from the transcript, not
+    # just silence. Model weights are baked into the worker image (Dockerfile).
+    "livekit-plugins-noise-cancellation>=0.2",
+    "livekit-plugins-turn-detector>=1.5",
 ]
 # Observability (WP-12) — gated tracing/error reporting. NOT installed by
 # default; core/observability.py no-ops without these. Enable with:
