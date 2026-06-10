@@ -36,19 +36,13 @@ DeepInterview closes the **prep ⇄ interview ⇄ feedback** loop: heavy reasoni
 
 ## 🤔 Why DeepInterview
 
-Most interview-prep tools are either chat-only, closed-source, or a per-minute SaaS you can't run yourself. DeepInterview is built differently: it's **voice-first** (you practice out loud, like the real thing), **multilingual** (UI in EN+VI, voice in 7 languages including Vietnamese), and **fully self-hostable** under Apache 2.0 with your own provider keys — and it **runs anonymously**: no account, no login, no data leaving your box unless you choose a provider.
+Practicing in your head (or in a text chat) isn't how interviews work. DeepInterview is **voice-first** — you answer out loud, in real time, like the real thing — and built to be **owned, not rented**:
 
-| | **DeepInterview** | Final Round AI | Interview Coder | Generic chat prep |
-|---|:---:|:---:|:---:|:---:|
-| Real-time **voice** interview | ✅ | ✅ | ❌ (coding-overlay) | ❌ (text) |
-| **Multilingual** (incl. Vietnamese) | ✅ | partial | ❌ | varies |
-| **Self-hostable** | ✅ | ❌ | ❌ | ❌ |
-| **Bring-your-own keys** | ✅ | ❌ | ❌ | ❌ |
-| **Scored, rubric-based** feedback | ✅ | ✅ | ❌ | varies |
-| **Open source** | ✅ Apache-2.0 | ❌ | ❌ | mostly ❌ |
-| Works **without sign-in** | ✅ | ❌ | ❌ | ❌ |
-
-<sub>Competitor columns reflect their publicly advertised positioning at time of writing; check their sites for current details. "Generic chat prep" = ChatGPT-style text Q&A without a voice loop or scored rubric.</sub>
+- **🎙️ A real conversation, not a form** — a cascaded **STT → LLM → TTS** loop on LiveKit with barge-in, semantic end-of-turn detection, and adaptive follow-ups, so the interviewer reacts to *what you actually said*.
+- **🧠 Prepared like a real interviewer** — before the call it reads your CV + the JD, researches the company, and precomputes a personalized question plan with rubrics; the live loop stays fast because the thinking already happened.
+- **📊 Feedback you can act on** — per-competency rubric scores, model answers, and a study coach that targets exactly the gaps the interview exposed (a closed prep ⇄ interview ⇄ feedback loop).
+- **🌐 Multilingual by design** — UI in EN+VI, voice interviews in 7 languages including Vietnamese; STT/TTS route by language automatically, and each language is a pluggable pack.
+- **🔓 Yours end to end** — Apache 2.0, fully self-hostable, **bring-your-own keys** for every provider (or run 100% offline on mock adapters), and **no sign-in required**: no account, no login, no data leaving your box unless you choose a provider.
 
 ## 📰 News
 
