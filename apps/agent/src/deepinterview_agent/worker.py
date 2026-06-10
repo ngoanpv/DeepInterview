@@ -40,6 +40,48 @@ from .shared_models import InterviewContext, RoomMetadata, ScoreRequest
 log = get_logger(__name__)
 
 
+def wire_audio_path_logging(ctx: JobContext, session) -> None:  # noqa: ANN001
+    """INFO-level tracing of the candidate→agent audio path.
+
+    The default SDK logs are silent about track publish/subscribe and user
+    speech state, which made a "the agent never hears the candidate" failure
+    undiagnosable from logs. One line per lifecycle event, low volume.
+    """
+
+    def _kind(pub) -> str:  # noqa: ANN001
+        return str(getattr(pub, "kind", "?"))
+
+    @ctx.room.on("participant_connected")
+    def _on_participant(p) -> None:  # noqa: ANN001
+        log.info("audio-path: participant connected identity=%s", p.identity)
+
+    @ctx.room.on("track_published")
+    def _on_published(pub, p) -> None:  # noqa: ANN001
+        log.info("audio-path: track PUBLISHED kind=%s muted=%s by %s",
+                 _kind(pub), getattr(pub, "muted", "?"), p.identity)
+
+    @ctx.room.on("track_subscribed")
+    def _on_subscribed(track, pub, p) -> None:  # noqa: ANN001
+        log.info("audio-path: track SUBSCRIBED kind=%s from %s", _kind(pub), p.identity)
+
+    @ctx.room.on("track_muted")
+    def _on_muted(pub, p) -> None:  # noqa: ANN001
+        log.info("audio-path: track MUTED kind=%s by %s", _kind(pub), p.identity)
+
+    for p in ctx.room.remote_participants.values():
+        pubs = {sid: _kind(pub) for sid, pub in p.track_publications.items()}
+        log.info("audio-path: already present identity=%s tracks=%s", p.identity, pubs)
+
+    @session.on("user_state_changed")
+    def _on_user_state(ev) -> None:  # noqa: ANN001
+        log.info("audio-path: user state -> %s", getattr(ev, "new_state", ev))
+
+    @session.on("user_input_transcribed")
+    def _on_user_transcribed(ev) -> None:  # noqa: ANN001
+        log.info("audio-path: user transcript final=%s len=%d",
+                 getattr(ev, "is_final", "?"), len(getattr(ev, "transcript", "") or ""))
+
+
 def wire_transcript_capture(session, userdata: InterviewUserdata) -> None:  # noqa: ANN001
     """Capture every committed conversation turn into the flat transcript log.
 
@@ -79,11 +121,12 @@ def _stt_lang(language: str, mixed: bool) -> str:
 
 def build_stt(settings, language="en", mixed=False):  # noqa: ANN001, ANN201 - livekit plugin types optional
     lang = _stt_lang(language, mixed)
-    # Deepgram now lists Vietnamese on nova-3 (lower WER than nova-2), so we use
-    # nova-3 for all languages. If a non-English language returns NO transcripts
-    # in streaming (nova-3 vi may be batch-only), revert the non-en branch to:
-    #     model = "nova-3" if lang in ("en", "multi") else "nova-2"
-    model = "nova-3"
+    # CONFIRMED in live testing (2026-06-10): nova-3 + language=vi returns NO
+    # transcripts on Deepgram's streaming API (English worked end-to-end in the
+    # same build) — the exact failure this comment predicted. Non-English
+    # languages therefore route to nova-2, which supports them in streaming;
+    # nova-3 stays for en/multi where it has the lower WER.
+    model = "nova-3" if lang in ("en", "multi") else "nova-2"
     provider = settings.stt_provider
     if provider == "deepgram" and settings.deepgram_api_key:
         from livekit.plugins import deepgram  # noqa: PLC0415
@@ -313,6 +356,7 @@ async def entrypoint(ctx: JobContext) -> None:
     # Persisted transcript = real committed turns (STT + agent speech), not
     # whatever the LLM chose to pass to save_answer.
     wire_transcript_capture(session, userdata)
+    wire_audio_path_logging(ctx, session)
 
     director = Director(
         userdata, enable_adaptive=settings.enable_adaptive_difficulty
