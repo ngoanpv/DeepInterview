@@ -169,8 +169,48 @@ def _decode_data_url(cv_url: str) -> tuple[bytes, str] | None:
         return None
 
 
+def _is_fetchable_url(url: str) -> bool:
+    """SSRF guard for the user-supplied CV URL.
+
+    Only http(s), and never loopback/private/link-local hosts — the fetch runs
+    server-side, so an attacker-chosen URL could otherwise probe the internal
+    network (e.g. a metadata service or the lightrag sidecar) with the response
+    reflected into the readable session view. Hostname-literal checks only (no
+    DNS resolution); pair with network egress policy for defence in depth. A
+    refused URL degrades exactly like an unreachable one (caller falls back to
+    treating the input as pasted text).
+    """
+    import ipaddress  # noqa: PLC0415
+    from urllib.parse import urlsplit  # noqa: PLC0415
+
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return False
+    if parts.scheme not in ("http", "https"):
+        return False
+    host = (parts.hostname or "").strip("[]").lower()
+    if not host or host == "localhost" or host.endswith((".localhost", ".internal")):
+        return False
+    try:
+        addr = ipaddress.ip_address(host)
+    except ValueError:
+        return True  # non-IP hostname: allowed (see docstring caveat)
+    return not (
+        addr.is_private
+        or addr.is_loopback
+        or addr.is_link_local
+        or addr.is_reserved
+        or addr.is_multicast
+        or addr.is_unspecified
+    )
+
+
 async def _fetch_url_bytes(cv_url: str) -> tuple[bytes, str] | None:
     """GET ``cv_url`` returning ``(bytes, content_type)``; ``None`` on any failure."""
+    if not _is_fetchable_url(cv_url):
+        log.warning("fetch_cv: refusing non-public URL %r", cv_url)
+        return None
     try:
         async with httpx.AsyncClient(timeout=_CV_FETCH_TIMEOUT_SEC) as client:
             resp = await client.get(cv_url, follow_redirects=True)

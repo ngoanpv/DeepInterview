@@ -24,9 +24,30 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata = {
-  title: "DeepInterview",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://deepinterview.ai",
+  ),
+  title: {
+    default: "DeepInterview — Practice the interview out loud",
+    template: "%s · DeepInterview",
+  },
   description:
-    "Voice-first AI mock-interview platform. English-first, multilingual.",
+    "Open-source, voice-first AI mock interviews. DeepInterview reads your CV and the job, researches the company, runs an adaptive voice interview, then shows you exactly what to fix. English-first, 10+ languages.",
+  applicationName: "DeepInterview",
+  openGraph: {
+    title: "DeepInterview — Practice the interview out loud",
+    description:
+      "Open-source, voice-first AI mock interviews — practice out loud, then pass the real one.",
+    url: "/",
+    siteName: "DeepInterview",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DeepInterview — Practice the interview out loud",
+    description:
+      "Open-source, voice-first AI mock interviews — practice out loud, then pass the real one.",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -35,7 +56,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       lang="en"
       className={`${inter.variable} ${fraunces.variable} ${jetbrains.variable}`}
     >
-      <body className="font-sans">{children}</body>
+      <body className="font-sans">
+        <noscript>
+          <style
+            dangerouslySetInnerHTML={{
+              __html: ".reveal{opacity:1!important;transform:none!important}",
+            }}
+          />
+        </noscript>
+        {children}
+      </body>
     </html>
   );
 }

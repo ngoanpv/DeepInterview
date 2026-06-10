@@ -36,6 +36,24 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN corepack enable
 WORKDIR /repo
 
+# NEXT_PUBLIC_* vars are inlined into the browser bundle at BUILD time by
+# Next.js — values injected at runtime (compose env_file) never reach client
+# code. Accept them as build args here and export them as env so `pnpm build`
+# bakes them in. docker-compose.yml wires these from the root .env via
+# `build.args` (see the web service). Hosted-only billing vars
+# (NEXT_PUBLIC_PADDLE_*) are intentionally not plumbed — the OSS compose
+# path runs without billing.
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_SENTRY_DSN
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
+    NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
+    NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
+    NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
+
 # Bring in installed node_modules, then the full source tree.
 COPY --from=deps /repo/node_modules ./node_modules
 COPY . .

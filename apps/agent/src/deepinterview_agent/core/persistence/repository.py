@@ -46,6 +46,8 @@ class SessionRepository(Protocol):
 
     async def save_transcript(self, session_id: str, turns: list[dict]) -> None: ...
 
+    async def save_coach_transcript(self, session_id: str, turns: list[dict]) -> None: ...
+
     async def mark_progress(self, session_id: str, step: str) -> None: ...
 
     async def add_warnings(self, session_id: str, warnings: list[str]) -> None: ...
@@ -67,6 +69,9 @@ class _SessionRow:
     context: dict[str, Any] | None = None
     scorecard: dict[str, Any] | None = None
     transcript: list[dict] | None = None
+    # Spoken study-coach conversation — SEPARATE from the interview transcript
+    # so a post-interview coach session can never overwrite the interview record.
+    coach_transcript: list[dict] | None = None
     answers: list[dict] = field(default_factory=list)
     progress: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -119,6 +124,9 @@ class MemoryRepository:
 
     async def save_transcript(self, session_id: str, turns: list[dict]) -> None:
         self._require(session_id).transcript = list(turns)
+
+    async def save_coach_transcript(self, session_id: str, turns: list[dict]) -> None:
+        self._require(session_id).coach_transcript = list(turns)
 
     async def mark_progress(self, session_id: str, step: str) -> None:
         row = self._require(session_id)
@@ -238,6 +246,11 @@ class SupabaseRepository:
     async def save_transcript(self, session_id: str, turns: list[dict]) -> None:
         await self._update(session_id, {"transcript": list(turns)})
 
+    async def save_coach_transcript(self, session_id: str, turns: list[dict]) -> None:
+        # Requires the coach_transcript column (migration 0004); callers treat
+        # this as best-effort, so a missing column logs rather than crashes.
+        await self._update(session_id, {"coach_transcript": list(turns)})
+
     async def mark_progress(self, session_id: str, step: str) -> None:
         def _build() -> Any:
             return self._table().select("progress").eq("id", session_id).limit(1).execute()
@@ -304,4 +317,12 @@ def get_repository(settings: Settings) -> SessionRepository:
     """Return a repository: Supabase if fully configured, else the memory singleton."""
     if settings.supabase_url and settings.supabase_service_role_key:
         return SupabaseRepository(settings.supabase_url, settings.supabase_service_role_key)
+    if settings.supabase_url or settings.supabase_service_role_key:
+        # Half-configured Supabase is almost always a deployment mistake; say so
+        # loudly instead of silently dropping every session into process memory.
+        log.error(
+            "Supabase is PARTIALLY configured (need BOTH SUPABASE_URL and "
+            "SUPABASE_SERVICE_ROLE_KEY); falling back to the in-memory store — "
+            "sessions will NOT survive a restart."
+        )
     return _MEMORY_REPO
