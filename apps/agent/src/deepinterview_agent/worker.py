@@ -21,13 +21,16 @@ from __future__ import annotations
 from livekit.agents import (
     AgentSession,
     JobContext,
+    JobProcess,
     WorkerOptions,
     cli,
+    metrics,
 )
 
 from .core.config import get_settings
 from .core.deps import build_deps
 from .core.logging import get_logger
+from .live import state
 from .live.director import Director
 from .live.guard import SessionGuard
 from .live.interviewer import Interviewer
@@ -35,6 +38,26 @@ from .live.state import InterviewUserdata
 from .shared_models import InterviewContext, RoomMetadata, ScoreRequest
 
 log = get_logger(__name__)
+
+
+def wire_transcript_capture(session, userdata: InterviewUserdata) -> None:  # noqa: ANN001
+    """Capture every committed conversation turn into the flat transcript log.
+
+    ``conversation_item_added`` fires for both the candidate's real STT
+    transcript and the agent's actually-spoken replies, so the persisted
+    transcript reflects what was said — it no longer depends on the LLM
+    remembering to call ``save_answer``, and an abrupt disconnect keeps every
+    turn committed so far. (Answers for SCORING still come from ``save_answer``
+    -> ``ctx.answers``; this log is the verbatim record.)
+    """
+
+    @session.on("conversation_item_added")
+    def _on_item(ev) -> None:  # noqa: ANN001
+        item = ev.item
+        role = getattr(item, "role", None)
+        text = getattr(item, "text_content", None)
+        if role in ("user", "assistant") and text:
+            state.add_turn(userdata, role, text)
 
 
 # --- component factories -----------------------------------------------------
@@ -140,13 +163,32 @@ def build_tts(settings, language="en"):  # noqa: ANN001, ANN201
     return cartesia.TTS(language=lang)
 
 
-def build_vad():  # noqa: ANN201
+def build_vad(proc: JobProcess | None = None):  # noqa: ANN201
+    """Return the Silero VAD, preferring the prewarmed per-process instance."""
+    if proc is not None and "vad" in proc.userdata:
+        return proc.userdata["vad"]
     from livekit.plugins import silero  # noqa: PLC0415
 
     return silero.VAD.load()
 
 
+def prewarm(proc: JobProcess) -> None:
+    """Load the VAD model once per job process (LiveKit prewarm best practice).
+
+    Loading Silero inside the entrypoint adds model-load latency to every job
+    and blocks the event loop; ``prewarm_fnc`` runs before jobs are assigned.
+    """
+    from livekit.plugins import silero  # noqa: PLC0415
+
+    proc.userdata["vad"] = silero.VAD.load()
+
+
 # --- session id --------------------------------------------------------------
+
+
+def _api_base(settings) -> str:  # noqa: ANN001
+    """Base URL for the prep/score API: AGENT_API_URL, else same-host default."""
+    return (settings.agent_api_url or f"http://localhost:{settings.agent_api_port}").rstrip("/")
 
 
 def _session_id_from_room(ctx: JobContext) -> str:
@@ -170,7 +212,7 @@ async def _load_context_via_api(session_id: str, settings) -> InterviewContext |
     """
     import httpx  # noqa: PLC0415
 
-    url = f"http://localhost:{settings.agent_api_port}/api/session/{session_id}"
+    url = f"{_api_base(settings)}/api/session/{session_id}"
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(url)
@@ -212,11 +254,15 @@ async def entrypoint(ctx: JobContext) -> None:
         stt=build_stt(settings, lang_mode.primary, lang_mode.mixed),
         llm=build_llm(settings),
         tts=build_tts(settings, lang_mode.primary),
-        vad=build_vad(),
+        vad=build_vad(ctx.proc),
         # Lean live loop: low-latency turns. Turn detection is on by default in
         # 1.x; preemptive generation starts the LLM before end-of-turn settles.
         preemptive_generation=True,
     )
+
+    # Persisted transcript = real committed turns (STT + agent speech), not
+    # whatever the LLM chose to pass to save_answer.
+    wire_transcript_capture(session, userdata)
 
     director = Director(
         userdata, enable_adaptive=settings.enable_adaptive_difficulty
@@ -233,25 +279,50 @@ async def entrypoint(ctx: JobContext) -> None:
         max_turns=settings.max_interview_turns,
     )
 
-    async def _on_shutdown() -> None:
-        await guard.aclose()
-        await director.aclose()
-        # Persist whatever was captured, best-effort, off the turn path.
+    # Cost discipline (Golden Rule #5): collect per-session STT/LLM/TTS usage so
+    # voice cost is observable, and log the summary at shutdown.
+    usage_collector = metrics.UsageCollector()
+
+    @session.on("metrics_collected")
+    def _on_metrics(ev) -> None:  # noqa: ANN001
+        usage_collector.collect(ev.metrics)
+
+    api_base = _api_base(settings)
+
+    async def _persist_via_api(has_answers: bool) -> bool:
+        """Persist the live result through the API process.
+
+        The worker runs in a SEPARATE process: with no Supabase configured the
+        API's in-memory repo is the canonical store, so writing through our own
+        ``deps.repo`` would land in a repo nobody reads (answers lost, never
+        scored). POST the result to the API instead; direct repo writes below
+        are the fallback for shared-store (Supabase) deployments.
+        """
+        import httpx  # noqa: PLC0415
+
+        payload = {
+            "context": userdata.ctx.model_dump(),
+            "transcript": userdata.transcript,
+            "status": None if has_answers else "no_answers",
+        }
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                resp = await client.post(
+                    f"{api_base}/api/session/{session_id}/live-result", json=payload
+                )
+            return resp.status_code == 200
+        except Exception:  # noqa: BLE001
+            log.exception("worker: live-result POST failed for %s", session_id)
+            return False
+
+    async def _persist_via_repo(has_answers: bool) -> bool:
+        """Direct-store fallback (correct when both processes share Supabase)."""
         try:
             await deps.repo.save_transcript(session_id, userdata.transcript)
         except Exception:  # noqa: BLE001
             log.exception("worker: save_transcript failed for %s", session_id)
-        # The live loop only mutates the IN-MEMORY userdata.ctx (an AnswerRecord
-        # is appended per answered turn — see live/state.py). Persist it BEFORE
-        # scoring; if persistence FAILS we must NOT score, or run_score ->
-        # load_context reads the prep-time (answer-less) context and produces a
-        # blank "complete" scorecard (coverage 0%). Both processes share the
-        # Supabase store (the in-memory repo is process-local; same caveat as the
-        # load path).
-        context_saved = False
         try:
             await deps.repo.save_context(session_id, userdata.ctx)
-            context_saved = True
         except Exception:  # noqa: BLE001
             log.error(
                 "worker: save_context FAILED for %s — answers not persisted; "
@@ -259,33 +330,52 @@ async def entrypoint(ctx: JobContext) -> None:
                 session_id,
                 exc_info=True,
             )
-
-        if not context_saved:
-            # Persistence failed: mark the session errored so the report shows an
-            # honest message rather than a misleading all-zeros card.
+            # Mark errored so the report shows an honest message, not zeros.
             try:
                 await deps.repo.update_status(session_id, "error")
             except Exception:  # noqa: BLE001
                 log.error("worker: update_status(error) failed for %s", session_id, exc_info=True)
-            return
-
-        if not userdata.ctx.answers:
-            # Interview produced no answers — record an honest terminal state and
-            # skip scoring entirely (no LLM calls, no blank "complete" card).
-            log.info("worker: session %s has no answers; marking no_answers (skip scoring)", session_id)
+            return False
+        if not has_answers:
             try:
                 await deps.repo.update_status(session_id, "no_answers")
             except Exception:  # noqa: BLE001
                 log.error("worker: update_status(no_answers) failed for %s", session_id, exc_info=True)
+        return True
+
+    async def _on_shutdown() -> None:
+        await guard.aclose()
+        await director.aclose()
+
+        try:
+            summary = usage_collector.get_summary()
+            log.info("worker: session %s usage: %s", session_id, summary)
+        except Exception:  # noqa: BLE001
+            log.exception("worker: usage summary failed for %s", session_id)
+
+        # An answer only counts if it has a non-empty transcript — a bare
+        # save_answer("") must not flip the session into the scoring path.
+        has_answers = any((a.transcript or "").strip() for a in userdata.ctx.answers)
+
+        # Persist BEFORE scoring; if nothing persisted, do NOT score (run_score
+        # would read the prep-time answer-less context -> blank card).
+        persisted = await _persist_via_api(has_answers)
+        if not persisted:
+            persisted = await _persist_via_repo(has_answers)
+        if not persisted or not has_answers:
+            if not has_answers:
+                log.info("worker: session %s has no answers; skipping scoring", session_id)
             return
 
-        # Fire scoring (WP-7) best-effort; never block shutdown on it.
-        api_base = f"http://localhost:{settings.agent_api_port}"
+        # Fire scoring (WP-7) best-effort; never block shutdown on it. The score
+        # endpoint runs the full LLM pipeline inline, so allow it minutes (a 10s
+        # ceiling would abandon nearly every real scoring run).
         try:
             import httpx  # noqa: PLC0415
 
             req = ScoreRequest(session_id=session_id)
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            score_timeout = httpx.Timeout(10.0, read=600.0)
+            async with httpx.AsyncClient(timeout=score_timeout) as client:
                 await client.post(f"{api_base}/api/score", json=req.model_dump())
         except Exception:  # noqa: BLE001
             log.exception("worker: scoring trigger failed for %s", session_id)
@@ -309,6 +399,7 @@ def main() -> None:
     cli.run_app(
         WorkerOptions(
             entrypoint_fnc=entrypoint,
+            prewarm_fnc=prewarm,
             ws_url=settings.livekit_url,
             api_key=settings.livekit_api_key,
             api_secret=settings.livekit_api_secret,

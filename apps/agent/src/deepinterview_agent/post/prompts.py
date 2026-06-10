@@ -81,28 +81,39 @@ def verify_score_prompts(
     competency: str,
     evidence: str,
     score: float,
+    transcript_excerpt: str = "",
 ) -> tuple[str, str]:
     """System/user prompts for a second, adversarial pass over a low/borderline score.
 
     Asks a sceptical reviewer whether the original 0-5 ``score`` for ``competency``
-    is justified by ``evidence``; if not, it proposes an ``adjusted_score`` (also
-    0-5) and a short ``reason``. The post module clamps the result and re-derives
-    the band, so only the numbers and the boolean verdict are trusted here.
+    is justified — grounded in the candidate's ACTUAL answer transcript when
+    available, not only the first pass's own evidence summary (judging evidence
+    written by the model under audit is circular). The post module clamps the
+    result and re-derives the band, so only the numbers and the boolean verdict
+    are trusted here.
     """
     system = (
         "You are a sceptical second reviewer auditing an interview score for "
-        "over- or under-scoring. Given one competency, the evidence cited, and the "
-        "original 0-5 score, decide whether that score is JUSTIFIED by the evidence. "
+        "over- or under-scoring. Given one competency, the candidate's actual "
+        "answer transcript (when available), the evidence the first reviewer "
+        "cited, and the original 0-5 score, decide whether that score is "
+        "JUSTIFIED by what the candidate actually said. "
         "If it is, set justified=true and repeat the original score as adjusted_score. "
         "If it is not, set justified=false and give a corrected adjusted_score on the "
         "same 0-5 scale (0 = no relevant content, 3 = solid, 5 = exceptional) with a "
         "brief reason. Be conservative; only move the score when the evidence clearly "
         "warrants it. Respond ONLY with the requested schema."
     )
+    transcript_block = (
+        f"CANDIDATE'S ANSWER TRANSCRIPT:\n{transcript_excerpt}\n\n"
+        if transcript_excerpt
+        else ""
+    )
     user = (
         f"COMPETENCY: {competency}\n"
         f"ORIGINAL SCORE: {score:.2f} / 5\n\n"
-        f"EVIDENCE CITED:\n{evidence or '(no evidence was recorded)'}"
+        f"{transcript_block}"
+        f"EVIDENCE CITED BY THE FIRST REVIEWER:\n{evidence or '(no evidence was recorded)'}"
     )
     return system, user
 

@@ -65,9 +65,10 @@ deepinterview/
 ## Commands (fill in as you scaffold)
 ```bash
 pnpm install
-deepinterview init  # CLI wizard: pick providers, set API keys, write .env
-pnpm dev            # web + agent locally
-docker compose up   # full stack incl. lightrag
+pnpm build                # builds shared contracts + cli (cli/dist) + web
+pnpm deepinterview init   # writes .env + syncs apps/agent/.env + apps/web/.env.local
+pnpm dev                  # local dev: web :3000 + agent API :8000 (voice worker is separate)
+docker compose up         # full stack incl. lightrag (--profile live adds the voice worker)
 pnpm test
 pnpm lint && pnpm typecheck
 ```

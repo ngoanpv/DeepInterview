@@ -74,7 +74,19 @@ class Settings(BaseSettings):
 
     # --- service -------------------------------------------------------------
     agent_api_port: int = 8000
+    # Base URL the WORKER uses to reach the prep/score API. Defaults to
+    # localhost:{agent_api_port} (same-host dev); docker compose overrides it to
+    # the service DNS name (AGENT_API_URL=http://agent-api:8000) because the
+    # worker runs in a separate container where localhost is itself.
+    agent_api_url: str | None = None
     default_language: str = "en"
+
+    # --- LLM call resilience --------------------------------------------------
+    # Per-call ceiling on prep/post LLM requests. Without it a stalled provider
+    # call hangs the prep graph forever and the session sticks in "prep" (the
+    # node-level try/except only fires once the call RETURNS). The post pipeline
+    # additionally has per-stage timeouts.
+    llm_call_timeout_sec: float = 90.0
 
     # --- live: adaptive interview (off the turn-critical path) ----------------
     # When on, the background Director caches an advisory difficulty

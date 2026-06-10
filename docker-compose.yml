@@ -45,6 +45,11 @@ services:
       - "8000"
     ports:
       - "8000:8000"
+    environment:
+      # Reach the knowledge sidecar over the compose network (overrides the
+      # .env localhost default, which would resolve to this container itself;
+      # unset, the agent silently falls back to the offline mock).
+      - LIGHTRAG_URL=http://lightrag:9621
     env_file:
       - path: .env
         required: false
@@ -81,6 +86,14 @@ services:
       - -m
       - deepinterview_agent.worker
       - start
+    environment:
+      # Compose-network service URLs (override the .env localhost defaults,
+      # which would resolve to this container itself):
+      #   AGENT_API_URL — the worker fetches the precomputed interview plan
+      #     from the prep/score API.
+      #   LIGHTRAG_URL  — knowledge sidecar; unset = silent mock fallback.
+      - AGENT_API_URL=http://agent-api:8000
+      - LIGHTRAG_URL=http://lightrag:9621
     env_file:
       - path: .env
         required: false
@@ -95,12 +108,25 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      # NEXT_PUBLIC_* values are inlined into the browser bundle at BUILD time
+      # by Next.js — runtime env_file values never reach client code. Pass them
+      # as build args (compose interpolates ${...} from the root .env) so
+      # `docker compose up --build` bakes them in. Mirrors the NEXT_PUBLIC_
+      # keys in .env.example.
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
     ports:
       - "3000:3000"
     environment:
-      # Reach the agent over the compose network (overrides the .env localhost
-      # default, which would resolve to the web container itself).
+      # Reach the agent + knowledge sidecar over the compose network (overrides
+      # the .env localhost defaults, which would resolve to the web container
+      # itself; an unset LIGHTRAG_URL means a silent mock fallback).
       - AGENT_API_URL=http://agent-api:8000
+      - LIGHTRAG_URL=http://lightrag:9621
     env_file:
       - path: .env
         required: false

@@ -183,6 +183,14 @@ async def run_score(req: ScoreRequest, deps: Deps) -> ScoreCard:
     session stuck mid-scoring). Whenever a context exists the resulting card is
     persisted and the session is marked ``complete``.
     """
+    # Idempotency: scoring re-runs the full paid LLM pipeline, so a retry /
+    # double-click against an already-scored session returns the persisted card
+    # instead of re-billing and overwriting it.
+    view = await deps.repo.get_session_view(req.session_id)
+    if view is not None and view.status == "complete" and view.scorecard is not None:
+        log.info("post: session %s already scored; returning persisted card", req.session_id)
+        return view.scorecard
+
     ctx = await deps.repo.load_context(req.session_id)
     if ctx is None:
         # No context to score. Returning (rather than persisting) is correct for
@@ -190,7 +198,10 @@ async def run_score(req: ScoreRequest, deps: Deps) -> ScoreCard:
         # (don't overwrite its "error" status with "complete").
         return _missing_context_scorecard(req.session_id)
 
-    if not ctx.answers:
+    # An answer only counts if it carries a non-empty transcript: the live
+    # save_answer tool can record empty or unmatched answers that would pass a
+    # bare list-truthiness check yet be unscorable (-> blank "complete" card).
+    if not any((a.transcript or "").strip() for a in ctx.answers):
         # A context exists but no answers were captured (interview ended before
         # any question was answered, or answers never persisted). Do NOT run the
         # LLM scoring stages or mark the session "complete" with a blank card —
@@ -204,7 +215,15 @@ async def run_score(req: ScoreRequest, deps: Deps) -> ScoreCard:
 
     comp_scores = await _guarded(evaluate(ctx, deps), label="evaluate", timeout=timeout)
     if comp_scores is None:
-        comp_scores = []
+        # The WHOLE evaluate stage failed for an interview that HAS answers
+        # (per-question failures are isolated inside evaluate; None means the
+        # stage itself died). Persisting a zero-score card as "complete" would
+        # misreport an answered interview as scoring 0 — mark the session
+        # errored (retriable: a later /api/score re-runs from the same context)
+        # and return a well-formed card without persisting it.
+        log.error("post: evaluate stage failed for %s; marking error (no card persisted)", req.session_id)
+        await deps.repo.update_status(req.session_id, "error")
+        return _degraded_scorecard(ctx, [], _fallback_language_report())
 
     # Optional adversarial calibration pass (gated, OFF by default). Guarded so a
     # verifier failure leaves the evaluated scores untouched rather than degrading.

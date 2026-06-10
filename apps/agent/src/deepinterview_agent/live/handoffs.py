@@ -1,20 +1,24 @@
 """Specialist interviewer personas reachable via native LiveKit handoffs.
 
 REQUIRES the optional ``livekit-agents`` extra (``uv sync --extra livekit``);
-this module imports ``livekit.agents`` at load time and must NOT be imported by
-``live/__init__.py`` (keep the offline ``import ...live.state`` path clean).
+this module imports ``livekit.agents`` (via ``interviewer``) at load time and
+must NOT be imported by ``live/__init__.py`` (keep the offline
+``import ...live.state`` path clean).
 
-Each persona is a lean :class:`~livekit.agents.Agent` with its own short
-instructions and may override the per-agent LLM/TTS (e.g. a more deliberate
-voice for a coding round). The shared interview tools (save_answer,
-get_next_question, ...) live on the base :class:`Interviewer` agent; returning
-one of these from a ``@function_tool`` performs a native persona handoff while
-keeping the same :class:`AgentSession` userdata.
+Each persona SUBCLASSES :class:`Interviewer` — in LiveKit Agents 1.x function
+tools are per-agent, so a persona must inherit the shared interview tools
+(save_answer, get_next_question, ...) or the model is ordered to call tools
+that do not exist and the cursor/answer log silently stop advancing. The
+handoff site passes the running ``chat_ctx`` so the persona keeps the
+conversation history (a bare ``Agent`` starts from an empty context), and each
+persona overrides ``on_enter`` to drive its round opening proactively — a
+handoff that returns only an Agent generates no reply on its own.
 """
 
 from __future__ import annotations
 
-from livekit.agents import Agent
+from . import state
+from .interviewer import Interviewer, _localized
 
 _CODING_INSTRUCTIONS = (
     "You are now running the CODING round. Pose one focused, hands-on problem "
@@ -31,15 +35,52 @@ _BEHAVIORAL_INSTRUCTIONS = (
 )
 
 
-class CodingRoundAgent(Agent):
+class _RoundPersona(Interviewer):
+    """Shared base for round personas: full interview tools + a round opener."""
+
+    _round_label = "next"
+
+    def __init__(self, userdata, chat_ctx=None) -> None:  # noqa: ANN001
+        super().__init__(
+            userdata,
+            chat_ctx=chat_ctx,
+            extra_instructions=self._round_instructions(),
+        )
+
+    def _round_instructions(self) -> str:
+        raise NotImplementedError
+
+    async def on_enter(self) -> None:
+        """Open the round proactively (no greeting — the interview is mid-flight)."""
+        ud = self.session.userdata
+        primary = ud.ctx.plan.language_mode.primary
+        q = state.current_question(ud)
+        question_line = (
+            _localized(q.text, primary) if q is not None else "(no further questions)"
+        )
+        self.session.generate_reply(
+            instructions=(
+                f"Transition smoothly into the {self._round_label} round, speaking "
+                f"in {primary}. In one short sentence say you're moving to this "
+                f"round, then ask this question and stop: {question_line}. Do not "
+                "re-introduce yourself or call any tools yet."
+            )
+        )
+
+
+class CodingRoundAgent(_RoundPersona):
     """Persona for the live coding round."""
 
-    def __init__(self) -> None:
-        super().__init__(instructions=_CODING_INSTRUCTIONS)
+    _round_label = "coding"
+
+    def _round_instructions(self) -> str:
+        return _CODING_INSTRUCTIONS
 
 
-class BehavioralAgent(Agent):
+class BehavioralAgent(_RoundPersona):
     """Persona for the behavioral round."""
 
-    def __init__(self) -> None:
-        super().__init__(instructions=_BEHAVIORAL_INSTRUCTIONS)
+    _round_label = "behavioral"
+
+    def _round_instructions(self) -> str:
+        return _BEHAVIORAL_INSTRUCTIONS

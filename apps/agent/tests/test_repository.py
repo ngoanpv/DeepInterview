@@ -41,6 +41,37 @@ def test_create_save_load_round_trip() -> None:
     assert loaded.model_dump() == ctx.model_dump()
 
 
+def test_create_session_stamps_user_id() -> None:
+    """Regression (report RLS bug, PR #5): the owning user must land on the row.
+
+    Dropping the ``user_id=req.user_id`` stamp would silently pass the rest of
+    the suite while breaking the hosted layer's RLS ownership read
+    (``auth.uid() = user_id`` in supabase/migrations/0001_init.sql).
+    """
+    repo = MemoryRepository()
+    owner = "11111111-2222-3333-4444-555555555555"
+    req = _prep_request().model_copy(update={"user_id": owner})
+    session_id = _run(repo.create_session(req))
+    assert repo._rows[session_id].user_id == owner
+
+    # The offline/no-auth path stays ownerless (None), never an empty string.
+    anon_id = _run(repo.create_session(_prep_request()))
+    assert repo._rows[anon_id].user_id is None
+
+
+def test_save_coach_transcript_does_not_touch_interview_transcript() -> None:
+    """The spoken coach's log persists separately from the interview record."""
+    repo = MemoryRepository()
+    session_id = _run(repo.create_session(_prep_request()))
+    interview = [{"role": "user", "text": "my interview answer"}]
+    coach = [{"role": "assistant", "text": "let's drill system design"}]
+    _run(repo.save_transcript(session_id, interview))
+    _run(repo.save_coach_transcript(session_id, coach))
+    row = repo._rows[session_id]
+    assert row.transcript == interview
+    assert row.coach_transcript == coach
+
+
 def test_update_status_and_missing_load() -> None:
     repo = MemoryRepository()
     session_id = _run(repo.create_session(_prep_request()))

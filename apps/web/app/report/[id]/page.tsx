@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import { type ScoreCard, type InterviewContext } from "@deepinterview/shared";
 import { serverEnv } from "@/lib/env";
 import { SessionViewSchema } from "@/lib/session";
 import { SAMPLE_SCORECARD, SAMPLE_INTERVIEW } from "@/lib/sample-scorecard";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -28,18 +29,25 @@ import {
 export const dynamic = "force-dynamic";
 
 /**
- * - `ready`   real scorecard with competency scores → full report.
+ * - `ready`   real scorecard persisted → full report (possibly `degraded`).
  * - `sample`  agent unreachable / unknown session → sample preview.
  * - `empty`   interview produced no answers (status `no_answers`, or a legacy
  *             `complete` row with a blank card) → honest empty state, NOT zeros.
  * - `scoring` interview done but scoring hasn't produced a card yet → poll.
- * - `error`   session errored (e.g., answers failed to persist) → honest notice.
+ * - `error`   session errored (scoring failed — retriable) → honest notice.
  */
 type ReportState = "ready" | "sample" | "empty" | "scoring" | "error";
 
 interface Loaded {
   state: ReportState;
   scorecard: ScoreCard;
+  /**
+   * The agent deliberately persists degraded cards (numbers-only when the
+   * narrative LLM call fails — see the agent's `_degraded_scorecard`). When the
+   * persisted card is missing its narrative (or its scores), we still render
+   * the report but flag it so the page shows an honest partial-report notice.
+   */
+  degraded: boolean;
   context: InterviewContext | null;
   company: string | null;
   role: string | null;
@@ -56,6 +64,7 @@ async function load(id: string): Promise<Loaded> {
   const sample: Loaded = {
     state: "sample",
     scorecard: SAMPLE_SCORECARD,
+    degraded: false,
     context: null,
     company: SAMPLE_INTERVIEW.company,
     role: SAMPLE_INTERVIEW.role,
@@ -73,6 +82,7 @@ async function load(id: string): Promise<Loaded> {
 
     const view = parsed.data;
     const base = {
+      degraded: false,
       context: view.context,
       company: view.context?.job.company_name ?? null,
       role: view.context?.job.title ?? null,
@@ -88,11 +98,32 @@ async function load(id: string): Promise<Loaded> {
     ) {
       return { ...base, state: "empty", scorecard: SAMPLE_SCORECARD };
     }
+    // `error` now also covers a scoring (evaluate) failure for an answered
+    // interview — retriable, so the error copy invites a re-run.
     if (view.status === "error" || view.status === "rejected") {
       return { ...base, state: "error", scorecard: SAMPLE_SCORECARD };
     }
-    if (view.scorecard && hasScores) {
-      return { ...base, state: "ready", scorecard: view.scorecard };
+    // A persisted card ALWAYS renders — the agent deliberately writes degraded
+    // (numbers-only / narrative-less) cards, and a `complete` session is
+    // terminal: polling it forever would never change anything. Flag partial
+    // cards so the page shows an honest notice instead of silent blanks.
+    if (view.scorecard && (hasScores || view.status === "complete")) {
+      const c = view.scorecard;
+      const narrativeMissing =
+        c.strengths.length === 0 &&
+        c.weaknesses.length === 0 &&
+        c.model_answers.length === 0;
+      return {
+        ...base,
+        state: "ready",
+        scorecard: c,
+        degraded: !hasScores || narrativeMissing,
+      };
+    }
+    // `complete` but no card at all (partial/legacy write): terminal — treat as
+    // a retriable scoring error rather than polling forever.
+    if (view.status === "complete") {
+      return { ...base, state: "error", scorecard: SAMPLE_SCORECARD };
     }
     // Interview not scored yet — poll until a terminal state arrives.
     return { ...base, state: "scoring", scorecard: SAMPLE_SCORECARD };
@@ -214,11 +245,11 @@ export default async function ReportPage({
               Give it another go — answer out loud and we’ll build your report.
             </p>
             <div className="flex flex-wrap justify-center gap-3">
-              <Link href="/setup" className="no-underline">
-                <Button variant="ink">Practice again</Button>
+              <Link href="/setup" className={buttonClasses()}>
+                Practice again
               </Link>
-              <Link href="/" className="no-underline">
-                <Button variant="out">Back home</Button>
+              <Link href="/" className={buttonClasses({ variant: "out" })}>
+                Back home
               </Link>
             </div>
           </CardContent>
@@ -227,7 +258,8 @@ export default async function ReportPage({
     );
   }
 
-  // Session errored (e.g., answers failed to persist) — be honest, don't fake zeros.
+  // Session errored — scoring failed before a card was saved. The agent keeps
+  // the session's answers, so scoring is retriable; be honest, don't fake zeros.
   if (loaded.state === "error") {
     return (
       <StatusShell>
@@ -237,13 +269,22 @@ export default async function ReportPage({
               We couldn’t score this interview
             </h1>
             <p className="max-w-sm text-sm leading-relaxed text-muted">
-              Something went wrong saving or scoring this session, so we’re not
-              showing a report rather than show inaccurate results. Please try
-              another run.
+              Scoring hit a temporary error, so we’re not showing a report
+              rather than show inaccurate results. Your answers are saved and
+              scoring can be retried — check back here in a few minutes, or
+              start another run.
             </p>
-            <Link href="/setup" className="no-underline">
-              <Button variant="ink">Practice again</Button>
-            </Link>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link
+                href={`/report/${encodeURIComponent(id)}`}
+                className={buttonClasses()}
+              >
+                Check again
+              </Link>
+              <Link href="/setup" className={buttonClasses({ variant: "out" })}>
+                Practice again
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </StatusShell>
@@ -277,6 +318,22 @@ export default async function ReportPage({
           {scorecard.summary}
         </p>
       </div>
+
+      {/* Partial (degraded) card: the agent persisted it without the full
+          narrative — show what's there, with an honest notice. */}
+      {loaded.degraded && (
+        <div className="mt-6 flex items-start gap-2 rounded-[10px] border border-line bg-accent-soft px-3.5 py-2.5 text-[13px] leading-relaxed text-ink-soft">
+          <AlertTriangle
+            className="mt-0.5 h-4 w-4 shrink-0 text-accent"
+            aria-hidden
+          />
+          <span>
+            Partial report: the detailed narrative was unavailable when this
+            interview was scored. Your scores are preserved — re-run scoring to
+            get the full write-up and model answers.
+          </span>
+        </div>
+      )}
 
       {/* Bento: hero + top metrics */}
       <section className="mt-8">
@@ -355,11 +412,20 @@ export default async function ReportPage({
               </p>
             </div>
             <div className="flex shrink-0 flex-wrap gap-3">
-              <Link href="/prep" className="no-underline">
-                <Button variant="ink">Coach me on my weak areas</Button>
+              <Link
+                // Pass the session so the Prep Coach builds from THIS report's
+                // real scorecard (the sample preview links plain /prep).
+                href={
+                  loaded.state === "ready"
+                    ? `/prep?session=${encodeURIComponent(id)}`
+                    : "/prep"
+                }
+                className={buttonClasses()}
+              >
+                Coach me on my weak areas
               </Link>
-              <Link href="/setup" className="no-underline">
-                <Button variant="out">Practice again</Button>
+              <Link href="/setup" className={buttonClasses({ variant: "out" })}>
+                Practice again
               </Link>
             </div>
           </CardContent>

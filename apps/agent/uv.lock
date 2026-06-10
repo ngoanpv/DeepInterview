@@ -543,6 +543,7 @@ livekit = [
     { name = "livekit-agents" },
     { name = "livekit-plugins-cartesia" },
     { name = "livekit-plugins-deepgram" },
+    { name = "livekit-plugins-elevenlabs" },
     { name = "livekit-plugins-google" },
     { name = "livekit-plugins-openai" },
     { name = "livekit-plugins-silero" },
@@ -578,6 +579,7 @@ requires-dist = [
     { name = "livekit-agents", marker = "extra == 'livekit'", specifier = ">=1.5" },
     { name = "livekit-plugins-cartesia", marker = "extra == 'livekit'", specifier = ">=1.5" },
     { name = "livekit-plugins-deepgram", marker = "extra == 'livekit'", specifier = ">=1.5" },
+    { name = "livekit-plugins-elevenlabs", marker = "extra == 'livekit'", specifier = ">=1.5" },
     { name = "livekit-plugins-google", marker = "extra == 'livekit'", specifier = ">=1.5" },
     { name = "livekit-plugins-openai", marker = "extra == 'livekit'", specifier = ">=1.5" },
     { name = "livekit-plugins-silero", marker = "extra == 'livekit'", specifier = ">=1.5" },
@@ -1449,6 +1451,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d5/a3/de74a74a9befb92e940693712d2d23b26d10b222d090cff69d682ff501f8/livekit_plugins_deepgram-1.5.17.tar.gz", hash = "sha256:678f5efb05fe0f3047c5cda2ab0f30aa0ece50a963450b578566a96691b2989a", size = 18334, upload-time = "2026-06-03T01:37:02.517Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0b/ec/06c5af45c8fdc8fb60988d6946717b430c1460239c6083ca6fe9fbe6179e/livekit_plugins_deepgram-1.5.17-py3-none-any.whl", hash = "sha256:c0226d38a2f7e8adbb8165c4ef1fc737ed5fed7415470b43c8f561a9fc339c3d", size = 23061, upload-time = "2026-06-03T01:37:01.431Z" },
+]
+
+[[package]]
+name = "livekit-plugins-elevenlabs"
+version = "1.5.17"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "livekit-agents", extra = ["codecs"] },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/bc/17/962911fe19499bb12acace4116eafe12f85a1910d925f1e0b8e957add198/livekit_plugins_elevenlabs-1.5.17.tar.gz", hash = "sha256:a2a31fc686a226f58838dcd469b93baa75661e25800f95de43d35891e86a1ec7", size = 17943, upload-time = "2026-06-03T01:37:05.224Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ba/e4/b8bd2c946fff05b64c0c5ae0246d009f889e9afcf51a7de6b0294b98fe11/livekit_plugins_elevenlabs-1.5.17-py3-none-any.whl", hash = "sha256:ec5176668553f79d71c7d7aea209b4b519dfd093cccbb95a6649df997bdbf1bd", size = 20587, upload-time = "2026-06-03T01:37:03.986Z" },
 ]
 
 [[package]]
