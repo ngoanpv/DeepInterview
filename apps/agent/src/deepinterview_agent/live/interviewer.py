@@ -4,7 +4,7 @@ REQUIRES the optional ``livekit-agents`` extra (``uv sync --extra livekit``);
 imports ``livekit.agents`` at load time, so it is imported lazily by the worker
 and NOT by ``live/__init__.py`` (offline ``import ...live.state`` stays clean).
 
-Design rules (CLAUDE.md golden rule #2: keep the live loop lean):
+Design rules (project golden rule #2: keep the live loop lean):
 - The prompt injects ONLY the compact candidate summary + the current question +
   recent turns — never the whole CV / JD / company intel.
 - ``@function_tool`` methods mutate the local :class:`InterviewUserdata` ONLY.

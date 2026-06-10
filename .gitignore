@@ -31,3 +31,6 @@ ee/
 
 # Product spec / internal design docs (kept local, not published)
 site/
+
+# Local agent instructions — never publish
+CLAUDE.md

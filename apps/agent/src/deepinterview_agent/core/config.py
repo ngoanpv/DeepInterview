@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     # vi-VN. Override via GEMINI_TTS_MODEL when a newer TTS model ships.
     gemini_tts_model: str = "gemini-2.5-flash-preview-tts"
     # 2026-current OpenAI default. UNVERIFIED — no OpenAI key in this env; re-verify
-    # the exact id + structured-output support before wiring billing (CLAUDE.md
+    # the exact id + structured-output support before wiring billing (project
     # golden rule #6). Env-overridable via OPENAI_MODEL.
     openai_model: str = "gpt-5.1-mini"
     # ElevenLabs TTS model — the low-latency multilingual voice for languages
