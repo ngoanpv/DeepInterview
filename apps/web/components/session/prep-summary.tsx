@@ -17,7 +17,12 @@ import type {
   JobSpec,
   QuestionPlan,
 } from "@deepinterview/shared";
-import { fetchSessionView, PREP_STEPS, type SessionView } from "@/lib/session";
+import {
+  fetchSessionView,
+  resetSessionPolling,
+  PREP_STEPS,
+  type ClientSessionView,
+} from "@/lib/session";
 import { cn } from "@/lib/cn";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Badge } from "@/components/ui/badge";
@@ -34,9 +39,21 @@ import {
 const POLL_MS = 1200;
 
 /** Statuses where prep is finished — stop polling. */
-function isTerminal(status: SessionView["status"]): boolean {
+function isTerminal(status: ClientSessionView["status"]): boolean {
   return status !== "prep";
 }
+
+/** Header badge label per status (exhaustive, incl. client-side terminals). */
+const STATUS_BADGE: Record<ClientSessionView["status"], string> = {
+  prep: "Preparing",
+  ready: "Ready",
+  rejected: "Needs input",
+  error: "Error",
+  complete: "Complete",
+  no_answers: "Complete",
+  not_found: "Not found",
+  stalled: "Stalled",
+};
 
 export function PrepSummary({
   sessionId,
@@ -46,7 +63,7 @@ export function PrepSummary({
   persona: string | null;
 }) {
   const router = useRouter();
-  const [view, setView] = useState<SessionView | null>(null);
+  const [view, setView] = useState<ClientSessionView | null>(null);
   // A nonce we bump to force a fresh poll cycle (used by the error Retry).
   const [retryKey, setRetryKey] = useState(0);
 
@@ -72,9 +89,11 @@ export function PrepSummary({
   }, [sessionId, retryKey]);
 
   const onRetry = useCallback(() => {
+    // Restart the 404/deadline bookkeeping so the retry gets a fresh window.
+    resetSessionPolling(sessionId);
     setView(null);
     setRetryKey((k) => k + 1);
-  }, []);
+  }, [sessionId]);
 
   const goSetup = useCallback(() => router.push("/setup"), [router]);
   const goInterview = useCallback(() => {
@@ -89,15 +108,7 @@ export function PrepSummary({
     <main className="mx-auto max-w-[920px] px-6 py-12">
       <header className="flex items-center justify-between">
         <Eyebrow>DeepInterview</Eyebrow>
-        <Badge variant="outline">
-          {status === "prep"
-            ? "Preparing"
-            : status === "ready"
-              ? "Ready"
-              : status === "rejected"
-                ? "Needs input"
-                : "Error"}
-        </Badge>
+        <Badge variant="outline">{STATUS_BADGE[status]}</Badge>
       </header>
 
       {status === "prep" && (
@@ -124,6 +135,27 @@ export function PrepSummary({
 
       {status === "error" && (
         <ErrorView onRetry={onRetry} onBackToSetup={goSetup} />
+      )}
+
+      {/* Polling deadline passed without a terminal status — honest stall. */}
+      {status === "stalled" && (
+        <ErrorView
+          eyebrow="Taking too long"
+          title="Prep is taking longer than it should"
+          description="We waited several minutes without hearing back. Retry to keep waiting, or head back to setup and start fresh."
+          onRetry={onRetry}
+          onBackToSetup={goSetup}
+        />
+      )}
+
+      {/* Repeated 404s — this session genuinely doesn't exist. */}
+      {status === "not_found" && (
+        <ErrorView
+          eyebrow="Session not found"
+          title="We couldn't find this session"
+          description="It may have expired or the link is wrong. Head back to setup to start a new one."
+          onBackToSetup={goSetup}
+        />
       )}
     </main>
   );
@@ -711,34 +743,38 @@ function RejectedView({
 }
 
 /* ------------------------------------------------------------------ */
-/* Error — generic recoverable failure                                 */
+/* Error — generic recoverable failure (also stalled / not-found copy) */
 /* ------------------------------------------------------------------ */
 
 function ErrorView({
+  eyebrow = "Something went wrong",
+  title = "We hit a snag preparing this",
+  description = "This is usually temporary. Retry, or head back to setup to start fresh.",
   onRetry,
   onBackToSetup,
 }: {
-  onRetry: () => void;
+  eyebrow?: string;
+  title?: string;
+  description?: string;
+  /** Omit to hide the Retry button (e.g. a session that doesn't exist). */
+  onRetry?: () => void;
   onBackToSetup: () => void;
 }) {
   return (
     <div className="mx-auto mt-10 max-w-[520px]">
       <Card>
         <CardHeader>
-          <Eyebrow>Something went wrong</Eyebrow>
-          <CardTitle className="serif text-2xl">
-            We hit a snag preparing this
-          </CardTitle>
-          <CardDescription>
-            This is usually temporary. Retry, or head back to setup to start
-            fresh.
-          </CardDescription>
+          <Eyebrow>{eyebrow}</Eyebrow>
+          <CardTitle className="serif text-2xl">{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3 pb-6">
-          <Button size="lg" onClick={onRetry}>
-            <RotateCw className="h-4 w-4" aria-hidden />
-            Retry
-          </Button>
+          {onRetry && (
+            <Button size="lg" onClick={onRetry}>
+              <RotateCw className="h-4 w-4" aria-hidden />
+              Retry
+            </Button>
+          )}
           <Button variant="out" size="lg" onClick={onBackToSetup}>
             Back to setup
           </Button>

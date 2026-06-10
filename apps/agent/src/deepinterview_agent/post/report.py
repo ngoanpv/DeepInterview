@@ -14,10 +14,12 @@ and assembles the final :class:`ScoreCard`:
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
 
+from ..core.logging import get_logger
 from ..shared_models import ModelAnswer, ScoreCard
 from .prompts import model_answer_prompts, report_summary_prompts
 
@@ -25,7 +27,12 @@ if TYPE_CHECKING:
     from ..core.deps import Deps
     from ..shared_models import CompetencyScore, InterviewContext, LanguageReport
 
+log = get_logger(__name__)
+
 _WEAK_LEVELS = frozenset({"weak", "developing"})
+
+# Bound concurrent model-answer drafts (same rationale as the evaluator).
+_MAX_CONCURRENT_DRAFTS = 4
 
 
 class _ReportNarrative(BaseModel):
@@ -81,16 +88,34 @@ def _competency_lines(comp_scores: list[CompetencyScore]) -> str:
 
 
 async def _model_answers(ctx: InterviewContext, deps: Deps) -> list[ModelAnswer]:
-    """Draft one improved answer per planned question."""
+    """Draft one improved answer per ANSWERED question (concurrent, isolated).
+
+    Only questions the candidate actually reached get a model answer — drafting
+    for never-asked questions burns LLM calls on content the report can't ground
+    (cost rule #5) and risks blowing the single stage timeout on long plans. A
+    failed draft drops that one answer instead of voiding the stage.
+    """
     by_question = {a.question_id: a for a in ctx.answers}
-    answers: list[ModelAnswer] = []
-    for question in ctx.plan.questions:
-        answered = by_question.get(question.id)
-        transcript = answered.transcript if answered is not None else None
-        system, user = model_answer_prompts(question, ctx.candidate, transcript)
-        text = await deps.llm.complete_text(system=system, user=user)
-        answers.append(ModelAnswer(question_id=question.id, answer=text))
-    return answers
+    answered = [
+        (q, by_question[q.id].transcript)
+        for q in ctx.plan.questions
+        if q.id in by_question and (by_question[q.id].transcript or "").strip()
+    ]
+
+    semaphore = asyncio.Semaphore(_MAX_CONCURRENT_DRAFTS)
+
+    async def _draft(question, transcript):  # noqa: ANN001, ANN202
+        async with semaphore:
+            try:
+                system, user = model_answer_prompts(question, ctx.candidate, transcript)
+                text = await deps.llm.complete_text(system=system, user=user)
+                return ModelAnswer(question_id=question.id, answer=text)
+            except Exception:  # noqa: BLE001 - isolate: one bad draft must not void the rest
+                log.exception("report: model answer failed for question %s; skipping", question.id)
+                return None
+
+    results = await asyncio.gather(*(_draft(q, t) for q, t in answered))
+    return [r for r in results if r is not None]
 
 
 async def generate_report(

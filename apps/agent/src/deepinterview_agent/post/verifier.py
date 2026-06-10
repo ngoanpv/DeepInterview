@@ -75,13 +75,33 @@ async def verify_scores(
     failure keeps the original score object.
     """
     timeout = deps.settings.score_verifier_timeout_sec
+
+    # Ground each check in what the candidate ACTUALLY said: map competency ->
+    # the transcripts of the answers to questions targeting it (capped so the
+    # excerpt stays prompt-sized). Auditing only the first pass's own evidence
+    # summary would be circular.
+    answers_by_qid = {a.question_id: a for a in ctx.answers}
+    transcript_by_competency: dict[str, str] = {}
+    for q in ctx.plan.questions:
+        a = answers_by_qid.get(q.id)
+        if a is None or not (a.transcript or "").strip():
+            continue
+        prev = transcript_by_competency.get(q.target_competency, "")
+        joined = f"{prev}\n\n{a.transcript}".strip()
+        transcript_by_competency[q.target_competency] = joined[:4000]
+
     verified: list[CompetencyScore] = []
     for cs in comp_scores:
         if cs.level not in _VERIFY_LEVELS:
             verified.append(cs)
             continue
 
-        system, user = verify_score_prompts(cs.competency, cs.evidence, cs.score)
+        system, user = verify_score_prompts(
+            cs.competency,
+            cs.evidence,
+            cs.score,
+            transcript_excerpt=transcript_by_competency.get(cs.competency, ""),
+        )
         verdict = await _guarded(
             deps.llm.complete_json(system=system, user=user, schema=_Verdict),
             label=f"score:{cs.competency}",

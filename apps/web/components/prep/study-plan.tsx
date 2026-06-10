@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Clock, ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { StatusChip } from "@/components/prep/status-chip";
 import { SAMPLE_STUDY_PLAN, type StudyModule } from "@/lib/sample-mastery";
@@ -79,22 +79,18 @@ export function StudyPlan({
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Link
                     href={`/prep?module=${m.id}`}
-                    className="no-underline"
+                    className={buttonClasses({ size: "sm" })}
                     aria-label={`Start module: ${m.title}`}
                   >
-                    <Button size="sm" variant="ink">
-                      Start
-                      <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                    </Button>
+                    Start
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                   </Link>
                   <Link
                     href={`/setup?focus=${encodeURIComponent(m.competency)}`}
-                    className="no-underline"
+                    className={buttonClasses({ size: "sm", variant: "out" })}
                     aria-label={`Practice ${m.competency} in a mock interview`}
                   >
-                    <Button size="sm" variant="out">
-                      Practice in a mock
-                    </Button>
+                    Practice in a mock
                   </Link>
                 </div>
               </CardContent>

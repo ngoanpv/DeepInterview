@@ -17,14 +17,22 @@ by averaging, and the merged band is re-derived from the averaged score.
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 
+from ..core.logging import get_logger
 from ..shared_models import CompetencyScore, MasteryLevel
 from .prompts import evaluate_answer_prompts
 
 if TYPE_CHECKING:
     from ..core.deps import Deps
     from ..shared_models import AnswerRecord, InterviewContext, PlannedQuestion
+
+log = get_logger(__name__)
+
+# Bound concurrent per-question LLM calls: parallel enough to fit the stage
+# timeout on long interviews, small enough to stay under provider rate limits.
+_MAX_CONCURRENT_SCORING = 4
 
 
 def _clamp_score(value: float) -> float:
@@ -50,21 +58,19 @@ def _answers_by_question(ctx: InterviewContext) -> dict[str, AnswerRecord]:
 
 async def _score_question(
     question: PlannedQuestion,
-    answer: AnswerRecord | None,
+    answer: AnswerRecord,
     deps: Deps,
 ) -> CompetencyScore:
-    """Score a single question, forcing competency + deriving level deterministically."""
-    transcript = answer.transcript if answer is not None else None
-    system, user = evaluate_answer_prompts(question, transcript)
+    """Score a single answered question, forcing competency + deriving level.
+
+    Unanswered questions never reach here — ``evaluate`` skips them (a
+    competency we never probed must not read as weak; see its docstring).
+    """
+    system, user = evaluate_answer_prompts(question, answer.transcript)
     raw = await deps.llm.complete_json(system=system, user=user, schema=CompetencyScore)
 
     score = _clamp_score(raw.score)
-    if answer is None:
-        # No answer to ground a score: pin low with explicit, non-evidence text.
-        score = 0.0
-        evidence = "No answer was recorded for this question."
-    else:
-        evidence = raw.evidence or "Scored against the question rubric."
+    evidence = raw.evidence or "Scored against the question rubric."
 
     return CompetencyScore(
         competency=question.target_competency,
@@ -113,12 +119,35 @@ async def evaluate(ctx: InterviewContext, deps: Deps) -> list[CompetencyScore]:
     not read as a weak one (that would poison ``overall_score`` and tell the
     Prep Coach to teach something the interview simply didn't reach). The
     fraction actually covered is reported separately as ``ScoreCard.coverage_pct``.
+
+    Per-question failures are ISOLATED: one failed/malformed LLM call drops that
+    question's score (logged) instead of wiping the whole stage — a transient
+    provider error on question 7 must not discard questions 1-6. Calls run
+    concurrently (bounded) so long interviews fit inside the stage timeout.
     """
     by_question = _answers_by_question(ctx)
-    raw_scores: list[CompetencyScore] = []
-    for question in ctx.plan.questions:
-        answer = by_question.get(question.id)
-        if answer is None or not (answer.transcript and answer.transcript.strip()):
-            continue  # unanswered: not assessable — see ScoreCard.coverage_pct
-        raw_scores.append(await _score_question(question, answer, deps))
+    answered = [
+        (question, by_question[question.id])
+        for question in ctx.plan.questions
+        if question.id in by_question
+        and (by_question[question.id].transcript or "").strip()
+    ]
+
+    semaphore = asyncio.Semaphore(_MAX_CONCURRENT_SCORING)
+
+    async def _score_one(question: PlannedQuestion, answer: AnswerRecord) -> CompetencyScore | None:
+        async with semaphore:
+            try:
+                return await _score_question(question, answer, deps)
+            except Exception:  # noqa: BLE001 - isolate: one bad call must not void the rest
+                log.exception("evaluator: scoring failed for question %s; skipping", question.id)
+                return None
+
+    results = await asyncio.gather(*(_score_one(q, a) for q, a in answered))
+    raw_scores = [r for r in results if r is not None]
+    if answered and not raw_scores:
+        # Every per-question call failed — that is a stage failure, not a
+        # legitimately empty result; raise so run_score's guard degrades instead
+        # of persisting a zero-score "complete" card for an answered interview.
+        raise RuntimeError("evaluator: all per-question scoring calls failed")
     return _merge_by_competency(raw_scores)

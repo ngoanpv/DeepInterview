@@ -32,7 +32,7 @@
 
 DeepInterview closes the **prep ⇄ interview ⇄ feedback** loop: heavy reasoning runs *before* the call (read your CV + the JD, research the company, build an adaptive question plan), a lean real-time voice loop runs the interview, then strong models score it and route you into a study coach for your weak areas.
 
-> **Honest status:** this is an **early open build**. The contracts, prep/live/post pipelines, web screens, and CLI are implemented and **run offline with mock adapters** (no API keys, tests green). Real-time voice, web research, and video avatars need provider keys, and `docker compose up` becomes the true full-stack one-liner as DevOps (WP-12) lands. We mark what's done honestly, per feature, throughout this README.
+> **Honest status:** this is an **early open build**. The contracts, prep/live/post pipelines, web screens, and CLI are implemented and **run offline with mock adapters** (no API keys, tests green). Real-time voice, web research, and video avatars need provider keys. `docker compose up` brings up the full base stack (web + agent API + knowledge sidecar, healthy with zero keys); the live voice worker runs via `docker compose --profile live up` once LiveKit keys are set. We mark what's done honestly, per feature, throughout this README.
 
 ## 🤔 Why DeepInterview
 
@@ -111,14 +111,17 @@ pnpm deepinterview init   # scaffold .env from .env.example (fill in keys later)
 > `pnpm build` must run before `pnpm deepinterview init` — the CLI is built into `cli/dist/`.
 > For the Python agent: `uv --directory apps/agent sync` then `uv --directory apps/agent run pytest`.
 
-### 2. Full-stack path (target — `docker compose up`)
+### 2. Full-stack path (`docker compose up` — verified)
 
 ```bash
-cp .env.example .env      # then fill in your provider keys
-docker compose up         # web (:3000) + agent worker + lightrag (:9621)
+pnpm deepinterview init    # or: cp .env.example .env  (keys are optional — see note)
+docker compose up --build  # web (:3000) + agent API (:8000) + lightrag (:9621)
 ```
 
-> **Status:** the compose file validates (`docker compose config`) and wires all three services. Real images, healthchecks, and the "open http://localhost:3000 and talk to it" experience are being finished in **DevOps (WP-12)**. Until then, prefer the offline path above for development.
+> **Status (verified June 2026, Docker 29 / Compose v5):** all images build and the three base services come up **healthy with zero keys** — the agent runs the full prep → plan → score loop on mock adapters, and http://localhost:3000 works offline.
+>
+> - **Docker reads the repo-root `.env`** (compose `env_file`). Local dev (`pnpm dev`) instead reads `apps/agent/.env` and `apps/web/.env.local` — keys there are **not** visible to the containers, so put them in the root `.env` for Docker.
+> - The **live voice worker** is opt-in: `docker compose --profile live up`. It **requires** `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` (plus STT/TTS/LLM keys) in the root `.env`; without them the worker exits and restart-loops while the base stack keeps running.
 
 ### 3. One-click deploy
 
