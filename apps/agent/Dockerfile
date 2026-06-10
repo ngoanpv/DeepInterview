@@ -50,5 +50,11 @@ CMD ["uv", "run", "uvicorn", "deepinterview_agent.app:app", "--host", "0.0.0.0",
 # load time, so running the worker off the base image would ModuleNotFoundError.
 FROM base AS worker
 RUN uv sync --frozen --no-dev --extra livekit || uv sync --no-dev --extra livekit
+# Bake the semantic turn-detector model weights (and Silero VAD) into the
+# image: importing each plugin registers it, download_files() fetches its
+# model. Without this the FIRST live session stalls on a runtime download.
+RUN uv run python -c "import livekit.plugins.silero, livekit.plugins.turn_detector; \
+from livekit.agents.plugin import Plugin; \
+[p.download_files() for p in Plugin.registered_plugins]"
 # `start` connects to LiveKit and waits for jobs (needs LIVEKIT_*/STT/TTS keys).
 CMD ["uv", "run", "python", "-m", "deepinterview_agent.worker", "start"]
