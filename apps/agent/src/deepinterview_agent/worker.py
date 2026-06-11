@@ -82,15 +82,22 @@ def wire_audio_path_logging(ctx: JobContext, session) -> None:  # noqa: ANN001
                  getattr(ev, "is_final", "?"), len(getattr(ev, "transcript", "") or ""))
 
 
-def wire_transcript_capture(session, userdata: InterviewUserdata) -> None:  # noqa: ANN001
+def wire_transcript_capture(
+    session, userdata: InterviewUserdata, *, tag_questions: bool = True  # noqa: ANN001
+) -> None:
     """Capture every committed conversation turn into the flat transcript log.
 
     ``conversation_item_added`` fires for both the candidate's real STT
     transcript and the agent's actually-spoken replies, so the persisted
     transcript reflects what was said — it no longer depends on the LLM
     remembering to call ``save_answer``, and an abrupt disconnect keeps every
-    turn committed so far. (Answers for SCORING still come from ``save_answer``
-    -> ``ctx.answers``; this log is the verbatim record.)
+    turn committed so far. Answers for scoring come from ``save_answer`` ->
+    ``ctx.answers``, with ``state.reconstruct_answers`` recovering any unsaved
+    ones from this log at shutdown.
+
+    ``tag_questions=False`` skips the per-turn question-id tag for sessions
+    that reuse an interview context but are not answering its plan (the study
+    coach) — otherwise coach chat would carry stale interview question ids.
     """
 
     @session.on("conversation_item_added")
@@ -99,7 +106,10 @@ def wire_transcript_capture(session, userdata: InterviewUserdata) -> None:  # no
         role = getattr(item, "role", None)
         text = getattr(item, "text_content", None)
         if role in ("user", "assistant") and text:
-            state.add_turn(userdata, role, text)
+            if tag_questions:
+                state.add_turn(userdata, role, text)
+            else:
+                userdata.transcript.append({"role": role, "text": text})
 
 
 # --- component factories -----------------------------------------------------
@@ -493,6 +503,18 @@ async def entrypoint(ctx: JobContext) -> None:
             log.info("worker: session %s usage: %s", session_id, summary)
         except Exception:  # noqa: BLE001
             log.exception("worker: usage summary failed for %s", session_id)
+
+        # Recover answers the save_answer tool never committed (model forgot to
+        # call it, or the candidate hung up mid-question) from the verbatim
+        # transcript — otherwise real answers are dropped and the session lands
+        # on "no_answers" with no report.
+        recovered = state.reconstruct_answers(userdata)
+        if recovered:
+            log.info(
+                "worker: session %s recovered %d answer(s) from transcript",
+                session_id,
+                recovered,
+            )
 
         # An answer only counts if it has a non-empty transcript — a bare
         # save_answer("") must not flip the session into the scoring path.

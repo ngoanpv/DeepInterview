@@ -96,8 +96,10 @@ async def entrypoint(ctx: JobContext) -> None:
     )
 
     # Capture the real coach conversation (CoachAgent has no tools, so nothing
-    # else ever fills the transcript log).
-    wire_transcript_capture(session, userdata)
+    # else ever fills the transcript log). tag_questions=False: the coach chat
+    # is not answering the interview plan, so turns must not carry its
+    # (possibly mid-plan) question ids.
+    wire_transcript_capture(session, userdata, tag_questions=False)
 
     # Same hard cost/duration backstop as the interview (Golden Rule #5): a
     # coaching chat is also a metered voice session and must never run unbounded.

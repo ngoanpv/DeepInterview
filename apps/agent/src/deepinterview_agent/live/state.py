@@ -37,6 +37,13 @@ _RICH_WORDS = 80
 # there is a higher rung left to climb to.
 _MAX_DIFFICULTY = 5
 
+# Minimum substance (word count) for a transcript-recovered answer — reuses the
+# _THIN_WORDS difficulty threshold. Below it, a question's user speech is small
+# talk or fragments (the reply to the greeting, "yes", "thanks, goodbye"), not
+# an answer: recovering it would fire the full LLM scoring pipeline on junk and
+# produce a misleading near-zero report instead of the honest no_answers state.
+_MIN_RECOVERED_WORDS = _THIN_WORDS
+
 
 @dataclass
 class InterviewUserdata:
@@ -124,8 +131,74 @@ def next_section(ud: InterviewUserdata) -> PlannedQuestion | None:
 
 
 def add_turn(ud: InterviewUserdata, role: str, text: str) -> None:
-    """Append a turn to the flat running transcript log."""
-    ud.transcript.append({"role": role, "text": text})
+    """Append a turn to the flat running transcript log.
+
+    Each turn is tagged with the question active at the time it was spoken so
+    :func:`reconstruct_answers` can recover unsaved answers on shutdown. An
+    empty ``question_id`` means the cursor was already past the planned end.
+    """
+    q = current_question(ud)
+    ud.transcript.append(
+        {"role": role, "text": text, "question_id": q.id if q is not None else ""}
+    )
+
+
+def reconstruct_answers(ud: InterviewUserdata) -> int:
+    """Recover unsaved answers from the verbatim transcript (shutdown fallback).
+
+    ``ctx.answers`` is normally filled by the model calling the ``save_answer``
+    tool — but the model can forget, and the candidate can hang up mid-question
+    before the tool ever fires. Both used to silently drop everything the
+    candidate said, flipping the session to ``no_answers`` ("no report") even
+    though the transcript held real answers.
+
+    For every question id that has user speech in the transcript but no
+    substantive saved answer, join that question's user turns into a new
+    :class:`AnswerRecord` (verbatim STT text, blank timestamps). Saved answers
+    are never touched. Returns the number of records added.
+
+    Guards:
+
+    * Substance gate: a question's joined speech must reach
+      ``_MIN_RECOVERED_WORDS`` words. Greeting small talk and one-word
+      acknowledgements stay unrecovered, so a contentless call keeps its
+      honest ``no_answers`` state instead of getting a junk scorecard.
+    * "Saved" matches the scorers' last-wins indexing (``{a.question_id: a}``):
+      a question only counts as saved if its LAST record has substance, so a
+      trailing ``save_answer("")`` cannot simultaneously void a question and
+      block its recovery.
+
+    Known residual: a candidate continuing their previous answer after the
+    cursor has advanced is tagged with the new question's id (cross-question
+    contamination). livekit-agents 1.5.x commits the user turn before tool
+    execution, so this only occurs on genuinely overlapping speech.
+    """
+    last_by_qid: dict[str, AnswerRecord] = {}
+    for a in ud.ctx.answers:
+        last_by_qid[a.question_id] = a
+    saved = {qid for qid, a in last_by_qid.items() if (a.transcript or "").strip()}
+    spoken: dict[str, list[str]] = {}
+    for turn in ud.transcript:
+        qid = turn.get("question_id") or ""
+        text = (turn.get("text") or "").strip()
+        if turn.get("role") != "user" or not qid or not text or qid in saved:
+            continue
+        spoken.setdefault(qid, []).append(text)
+    added = 0
+    for qid, texts in spoken.items():
+        joined = " ".join(texts)
+        if len(joined.split()) < _MIN_RECOVERED_WORDS:
+            continue
+        ud.ctx.answers.append(
+            AnswerRecord(
+                question_id=qid,
+                transcript=joined,
+                started_at="",
+                ended_at="",
+            )
+        )
+        added += 1
+    return added
 
 
 # --- adaptive difficulty (pure, livekit-free, deterministic) -----------------
