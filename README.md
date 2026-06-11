@@ -221,10 +221,7 @@ We'd love your help — especially **language packs**, **provider adapters**, an
 - [Good first issues](docs/GOOD_FIRST_ISSUES.md) — concrete, scoped tasks drawn from real gaps.
 - [Code of Conduct](CODE_OF_CONDUCT.md) · [Security policy](SECURITY.md).
 
-<!-- Contributor mosaic — populates after the repo is public (contrib.rocks reads the public contributor list). -->
 [![Contributors](https://contrib.rocks/image?repo=ngoanpv/DeepInterview)](https://github.com/ngoanpv/DeepInterview/graphs/contributors)
-
-> _The mosaic above renders once the repo is public and has contributors._
 
 ## Citation
 
