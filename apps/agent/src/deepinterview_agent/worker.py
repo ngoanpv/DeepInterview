@@ -82,15 +82,22 @@ def wire_audio_path_logging(ctx: JobContext, session) -> None:  # noqa: ANN001
                  getattr(ev, "is_final", "?"), len(getattr(ev, "transcript", "") or ""))
 
 
-def wire_transcript_capture(session, userdata: InterviewUserdata) -> None:  # noqa: ANN001
+def wire_transcript_capture(
+    session, userdata: InterviewUserdata, *, tag_questions: bool = True  # noqa: ANN001
+) -> None:
     """Capture every committed conversation turn into the flat transcript log.
 
     ``conversation_item_added`` fires for both the candidate's real STT
     transcript and the agent's actually-spoken replies, so the persisted
     transcript reflects what was said — it no longer depends on the LLM
     remembering to call ``save_answer``, and an abrupt disconnect keeps every
-    turn committed so far. (Answers for SCORING still come from ``save_answer``
-    -> ``ctx.answers``; this log is the verbatim record.)
+    turn committed so far. Answers for scoring come from ``save_answer`` ->
+    ``ctx.answers``, with ``state.reconstruct_answers`` recovering any unsaved
+    ones from this log at shutdown.
+
+    ``tag_questions=False`` skips the per-turn question-id tag for sessions
+    that reuse an interview context but are not answering its plan (the study
+    coach) — otherwise coach chat would carry stale interview question ids.
     """
 
     @session.on("conversation_item_added")
@@ -99,7 +106,10 @@ def wire_transcript_capture(session, userdata: InterviewUserdata) -> None:  # no
         role = getattr(item, "role", None)
         text = getattr(item, "text_content", None)
         if role in ("user", "assistant") and text:
-            state.add_turn(userdata, role, text)
+            if tag_questions:
+                state.add_turn(userdata, role, text)
+            else:
+                userdata.transcript.append({"role": role, "text": text})
 
 
 # --- component factories -----------------------------------------------------
@@ -119,6 +129,43 @@ def _stt_lang(language: str, mixed: bool) -> str:
     return "multi" if mixed else _STT_LANG.get(language, "en")
 
 
+def _deepgram_stt(lang: str, model: str, api_key=None):  # noqa: ANN001, ANN201
+    """Return a configured deepgram.STT instance with tuned params for each language tier.
+
+    nova-3 (en/multi):
+      - endpointing_ms=25: aggressive VAD is fine; semantic EOU model handles turns.
+      - numerals=True: gated to this tier to keep the nova-2 flag set minimal —
+        bad flag combos on non-English streams fail SILENTLY with zero
+        transcripts (see the nova-3+vi note in build_stt), and smart_format
+        already covers number formatting where supported.
+      - keyterm: not set here (per-session domain terms could be injected later).
+
+    nova-2 (all other languages incl. vi):
+      - endpointing_ms=300: Deepgram's own server-side silence window; 25ms fires
+        too eagerly for languages with more within-utterance pauses (e.g. Vietnamese),
+        flooding us with fragmented partials before our LiveKit 1.2s window acts.
+
+    smart_format=True applies to BOTH tiers (broadly language-supported:
+    number/date formatting).
+    """
+    from livekit.plugins import deepgram  # noqa: PLC0415
+
+    is_nova3 = model == "nova-3"
+    kwargs = dict(
+        language=lang,
+        model=model,
+        punctuate=True,
+        filler_words=True,
+        vad_events=True,
+        numerals=is_nova3,
+        smart_format=True,
+        endpointing_ms=25 if is_nova3 else 300,
+    )
+    if api_key is not None:
+        kwargs["api_key"] = api_key
+    return deepgram.STT(**kwargs)
+
+
 def build_stt(settings, language="en", mixed=False):  # noqa: ANN001, ANN201 - livekit plugin types optional
     lang = _stt_lang(language, mixed)
     # CONFIRMED in live testing (2026-06-10): nova-3 + language=vi returns NO
@@ -129,17 +176,13 @@ def build_stt(settings, language="en", mixed=False):  # noqa: ANN001, ANN201 - l
     model = "nova-3" if lang in ("en", "multi") else "nova-2"
     provider = settings.stt_provider
     if provider == "deepgram" and settings.deepgram_api_key:
-        from livekit.plugins import deepgram  # noqa: PLC0415
-
-        return deepgram.STT(api_key=settings.deepgram_api_key, language=lang, model=model)
+        return _deepgram_stt(lang, model, api_key=settings.deepgram_api_key)
     if provider == "soniox" and settings.soniox_api_key:
         from livekit.plugins import soniox  # noqa: PLC0415
 
         return soniox.STT(api_key=settings.soniox_api_key)
     log.warning("build_stt: no configured STT provider/key; using Deepgram default")
-    from livekit.plugins import deepgram  # noqa: PLC0415
-
-    return deepgram.STT(language=lang, model=model)
+    return _deepgram_stt(lang, model)
 
 
 def build_llm(settings):  # noqa: ANN001, ANN201
@@ -460,6 +503,18 @@ async def entrypoint(ctx: JobContext) -> None:
             log.info("worker: session %s usage: %s", session_id, summary)
         except Exception:  # noqa: BLE001
             log.exception("worker: usage summary failed for %s", session_id)
+
+        # Recover answers the save_answer tool never committed (model forgot to
+        # call it, or the candidate hung up mid-question) from the verbatim
+        # transcript — otherwise real answers are dropped and the session lands
+        # on "no_answers" with no report.
+        recovered = state.reconstruct_answers(userdata)
+        if recovered:
+            log.info(
+                "worker: session %s recovered %d answer(s) from transcript",
+                session_id,
+                recovered,
+            )
 
         # An answer only counts if it has a non-empty transcript — a bare
         # save_answer("") must not flip the session into the scoring path.
