@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { features } from "@deepinterview/ee";
 import { Container } from "@/components/ui/container";
 import { buttonClasses } from "@/components/ui/button";
 import { MobileMenu } from "@/components/landing/mobile-menu";
@@ -41,10 +42,24 @@ export function Nav() {
           >
             GitHub
           </a>
+          {features.auth ? (
+            <Link
+              href="/login"
+              className="hidden text-[14.5px] text-ink-soft hover:text-ink min-[861px]:inline"
+            >
+              Sign in
+            </Link>
+          ) : null}
           <Link href="/setup" className={buttonClasses()}>
             Start free
           </Link>
-          <MobileMenu links={NAV_LINKS} />
+          <MobileMenu
+            links={
+              features.auth
+                ? [...NAV_LINKS, { href: "/login", label: "Sign in" }]
+                : NAV_LINKS
+            }
+          />
         </div>
       </Container>
     </nav>

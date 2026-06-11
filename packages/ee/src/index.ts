@@ -34,3 +34,29 @@ export const features: EeFeatures = Object.freeze({
   premiumVoices: false,
   billing: false,
 });
+
+/** Input to {@link gateRequest}: one request's identity-relevant facts. */
+export interface GateInput {
+  /** Request pathname, e.g. "/setup" or "/api/upload". */
+  readonly pathname: string;
+  /** Whether the request carries a signed-in user. */
+  readonly isAuthenticated: boolean;
+}
+
+export type GateResult =
+  | { readonly allow: true }
+  | { readonly allow: false; readonly redirectTo?: string };
+
+/**
+ * Access decision for a request. Consumers:
+ * - the web proxy (page navigations) redirects to `redirectTo` on deny;
+ * - cost-bearing route handlers (/api/upload, /api/coach/chat, /api/kb/query)
+ *   respond 401 on deny and ignore `redirectTo`.
+ *
+ * The OSS build allows everything (auth stays optional / self-host friendly).
+ * A distribution that flips `features.auth` decides here which paths require
+ * a signed-in user.
+ */
+export function gateRequest(_input: GateInput): GateResult {
+  return { allow: true };
+}

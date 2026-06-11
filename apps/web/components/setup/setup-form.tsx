@@ -226,6 +226,12 @@ export function SetupForm({ r2Configured }: { r2Configured: boolean }) {
           router.push("/pricing");
           return;
         }
+        // Required-auth distribution and the session expired mid-form →
+        // sign back in, then return to setup.
+        if (result.reason === "auth_required") {
+          router.push("/login?next=/setup");
+          return;
+        }
         setError(result.error);
         setSubmitting(false);
         return;

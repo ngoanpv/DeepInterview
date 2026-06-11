@@ -1,6 +1,7 @@
 "use server";
 
 import type { PrepRequest } from "@deepinterview/shared";
+import { features } from "@deepinterview/ee";
 import { requestPrep } from "@/lib/api";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
@@ -13,8 +14,13 @@ import {
 export type StartSessionResult =
   | { ok: true; session_id: string }
   // `error` stays required (existing consumers read `result.error`); `reason`
-  // is an additive discriminator the client uses to route to /pricing.
-  | { ok: false; error: string; reason?: "out_of_interviews" };
+  // is an additive discriminator the client uses to route to /pricing
+  // (out_of_interviews) or /login (auth_required).
+  | {
+      ok: false;
+      error: string;
+      reason?: "out_of_interviews" | "auth_required";
+    };
 
 /**
  * Kick off the prep pipeline and return the new session id. We return
@@ -47,31 +53,44 @@ export async function startSession(
       userId = user.id;
       supabase = await createClient();
     }
+  }
 
-    // Load the billing-relevant profile row and roll the monthly period if due.
-    if (supabase) {
-      await supabase.rpc("reset_usage_if_due", { p_user_id: userId });
-      const { data } = await supabase
-        .from("profiles")
-        .select("plan, interviews_used, credits")
-        .eq("id", userId)
-        .maybeSingle();
-      profile = (data as ProfileBilling | null) ?? {
-        plan: "free",
-        interviews_used: 0,
-        credits: 0,
+  if (!userId && features.auth) {
+    // Distribution gate (no-op in OSS): server actions are public POST
+    // endpoints, so a required-auth distribution must fail closed here even
+    // though its proxy already redirects anonymous visitors off /setup.
+    // Deliberately OUTSIDE the `configured` branch: a missing/broken Supabase
+    // env must never let anonymous callers create sessions in such a build.
+    return {
+      ok: false,
+      error: "Sign in to start an interview.",
+      reason: "auth_required",
+    };
+  }
+
+  // Load the billing-relevant profile row and roll the monthly period if due.
+  if (supabase) {
+    await supabase.rpc("reset_usage_if_due", { p_user_id: userId });
+    const { data } = await supabase
+      .from("profiles")
+      .select("plan, interviews_used, credits")
+      .eq("id", userId)
+      .maybeSingle();
+    profile = (data as ProfileBilling | null) ?? {
+      plan: "free",
+      interviews_used: 0,
+      credits: 0,
+    };
+
+    // GOLDEN RULE 5: enforce the cap before any interview is created.
+    const gate = canStartInterview(profile);
+    if (!gate.allowed) {
+      return {
+        ok: false,
+        error:
+          "You've used all your interviews for this period. Upgrade or buy credits to continue.",
+        reason: gate.reason,
       };
-
-      // GOLDEN RULE 5: enforce the cap before any interview is created.
-      const gate = canStartInterview(profile);
-      if (!gate.allowed) {
-        return {
-          ok: false,
-          error:
-            "You've used all your interviews for this period. Upgrade or buy credits to continue.",
-          reason: gate.reason,
-        };
-      }
     }
   }
 

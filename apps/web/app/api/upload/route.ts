@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { gateRequest } from "@deepinterview/ee";
 import { presignUpload } from "@/lib/r2";
 import { isR2Configured } from "@/lib/env";
+import { getUser } from "@/lib/supabase/server";
 
 const BodySchema = z.object({
   filename: z.string().min(1),
@@ -9,6 +11,17 @@ const BodySchema = z.object({
 });
 
 export async function POST(request: Request) {
+  // Distribution gate (no-op in OSS): presigned uploads cost storage; a
+  // distribution with required auth rejects anonymous callers here.
+  const user = await getUser();
+  const gate = gateRequest({
+    pathname: "/api/upload",
+    isAuthenticated: Boolean(user),
+  });
+  if (!gate.allow) {
+    return NextResponse.json({ error: "Sign in required" }, { status: 401 });
+  }
+
   let body: z.infer<typeof BodySchema>;
   try {
     body = BodySchema.parse(await request.json());
