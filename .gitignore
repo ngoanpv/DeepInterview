@@ -34,3 +34,6 @@ site/
 
 # Local agent instructions — never publish
 CLAUDE.md
+
+# Supabase CLI local state (project ref, pooler URL)
+supabase/.temp/
