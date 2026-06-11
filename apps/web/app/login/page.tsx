@@ -19,6 +19,23 @@ import { Label } from "@/components/ui/label";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Spinner } from "@/components/ui/spinner";
 
+/**
+ * Post-login destination. Resolve the candidate against a sentinel origin and
+ * require it to stay there — this rejects absolute URLs, protocol-relative
+ * `//host`, and the URL parser's backslash / control-character normalization
+ * tricks (`/\evil.com`, `/%09/evil.com`) that prefix checks miss.
+ */
+function safeNext(raw: string | null): string {
+  if (!raw || !raw.startsWith("/")) return "/setup";
+  try {
+    const resolved = new URL(raw, "http://internal");
+    if (resolved.origin !== "http://internal") return "/setup";
+    return resolved.pathname + resolved.search + resolved.hash;
+  } catch {
+    return "/setup";
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const messages = useMessages();
@@ -45,7 +62,11 @@ export default function LoginPage() {
       setBusy(false);
       return;
     }
-    router.push("/setup");
+    // Read ?next= at submit time (client event) — avoids useSearchParams,
+    // which would force the prerendered page into a blank Suspense shell.
+    router.push(
+      safeNext(new URLSearchParams(window.location.search).get("next")),
+    );
   }
 
   return (

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { TokenResponse } from "@deepinterview/shared";
+import { gateRequest } from "@deepinterview/ee";
 import { getUser } from "@/lib/supabase/server";
 import { createInterviewToken } from "@/lib/livekit";
 import { isLiveKitConfigured, isSupabaseConfigured } from "@/lib/env";
@@ -22,11 +23,23 @@ export async function POST(request: Request) {
   }
 
   // Auth: require a user when Supabase is configured; allow a dev identity offline.
+  const user = isSupabaseConfigured() ? await getUser() : null;
+
+  // Distribution gate (no-op in OSS): LiveKit tokens grant publish time; a
+  // required-auth distribution rejects anonymous callers here even when the
+  // Supabase env is missing/broken (fail closed).
+  const gate = gateRequest({
+    pathname: "/api/token",
+    isAuthenticated: Boolean(user),
+  });
+  if (!gate.allow) {
+    return NextResponse.json({ error: "Sign in required" }, { status: 401 });
+  }
+
   let identity = body.identity;
   let name: string | undefined;
 
   if (isSupabaseConfigured()) {
-    const user = await getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

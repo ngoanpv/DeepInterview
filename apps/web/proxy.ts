@@ -14,10 +14,16 @@ export const config = {
      * - _next/static (build assets)
      * - _next/image (image optimizer)
      * - favicon.ico
-     * - API routes that never read auth cookies, where a refresh per request
-     *   is pure waste — api/session is polled every ~1.2s by the prep screen:
+     * - API routes where a proxy refresh per request is pure waste —
+     *   api/session is polled every ~1.2s by the prep screen and reads no
+     *   auth; api/coach + api/upload resolve the user in-handler (route
+     *   handlers can write cookies, so supabase-js refreshes the session
+     *   itself) and self-gate via @deepinterview/ee; api/health and
+     *   api/billing/webhook are identity-free:
      *   api/health, api/session, api/coach, api/upload, api/billing/webhook.
-     * API routes that DO read auth cookies (api/token, api/kb) stay matched.
+     * API routes that rely on the proxy refresh (api/token, api/kb) stay
+     * matched. The distribution gate in updateSession applies to pages only;
+     * API handlers self-gate with 401s.
      */
     "/((?!_next/static|_next/image|favicon.ico|api/health|api/session|api/coach|api/upload|api/billing/webhook).*)",
   ],

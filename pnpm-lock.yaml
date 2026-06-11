@@ -28,6 +28,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.1063.0
         version: 3.1063.0
+      '@deepinterview/ee':
+        specifier: workspace:*
+        version: link:../../packages/ee
       '@deepinterview/shared':
         specifier: workspace:*
         version: link:../../packages/shared
