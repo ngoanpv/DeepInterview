@@ -175,6 +175,40 @@ def test_run_score_skips_when_no_answers() -> None:
     assert deps.repo.get_status(session_id) == "no_answers"
 
 
+def test_run_score_skips_when_all_answers_are_blank() -> None:
+    """Answers whose transcripts are ALL empty/whitespace count as NO answers.
+
+    The guard is ``not any((a.transcript or '').strip() ...)`` — NOT a bare
+    ``if not ctx.answers``. A session whose only records are ``save_answer("")``
+    calls (the model fired the tool with empty text, no recoverable speech)
+    must land on ``no_answers`` with NO persisted scorecard, never flow into
+    evaluate and ship a misleading all-zeros 'complete' card."""
+    deps = build_deps()
+    session_id = asyncio.run(run_prep(_request(), deps))
+    ctx = asyncio.run(deps.repo.load_context(session_id))
+    assert ctx is not None
+    question_id = ctx.plan.questions[0].id
+    for blank in ("", "   "):
+        ctx.answers.append(
+            AnswerRecord(
+                question_id=question_id, transcript=blank, started_at="", ended_at=""
+            )
+        )
+    asyncio.run(deps.repo.save_context(session_id, ctx))
+    assert ctx.answers, "precondition: the answers list itself is non-empty"
+
+    sc = asyncio.run(run_score(ScoreRequest(session_id=session_id), deps))
+
+    # A well-formed empty card is returned for the direct caller...
+    assert isinstance(sc, ScoreCard)
+    assert sc.competency_scores == []
+    assert sc.overall_score == 0.0
+    assert sc.coverage_pct == 0.0
+    # ...the session is flagged no_answers (NOT complete), nothing persisted.
+    assert deps.repo.get_status(session_id) == "no_answers"
+    assert deps.repo._rows[session_id].scorecard is None
+
+
 def test_run_score_reports_partial_coverage() -> None:
     """Unanswered questions lower coverage_pct and never count as weak."""
     deps = build_deps()
