@@ -115,6 +115,15 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
+  packages/ee:
+    devDependencies:
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.15)(tsx@4.22.4)(typescript@6.0.3)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
   packages/shared:
     dependencies:
       zod:
