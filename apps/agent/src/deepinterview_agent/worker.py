@@ -119,6 +119,43 @@ def _stt_lang(language: str, mixed: bool) -> str:
     return "multi" if mixed else _STT_LANG.get(language, "en")
 
 
+def _deepgram_stt(lang: str, model: str, api_key=None):  # noqa: ANN001, ANN201
+    """Return a configured deepgram.STT instance with tuned params for each language tier.
+
+    nova-3 (en/multi):
+      - endpointing_ms=25: aggressive VAD is fine; semantic EOU model handles turns.
+      - numerals=True: gated to this tier to keep the nova-2 flag set minimal —
+        bad flag combos on non-English streams fail SILENTLY with zero
+        transcripts (see the nova-3+vi note in build_stt), and smart_format
+        already covers number formatting where supported.
+      - keyterm: not set here (per-session domain terms could be injected later).
+
+    nova-2 (all other languages incl. vi):
+      - endpointing_ms=300: Deepgram's own server-side silence window; 25ms fires
+        too eagerly for languages with more within-utterance pauses (e.g. Vietnamese),
+        flooding us with fragmented partials before our LiveKit 1.2s window acts.
+
+    smart_format=True applies to BOTH tiers (broadly language-supported:
+    number/date formatting).
+    """
+    from livekit.plugins import deepgram  # noqa: PLC0415
+
+    is_nova3 = model == "nova-3"
+    kwargs = dict(
+        language=lang,
+        model=model,
+        punctuate=True,
+        filler_words=True,
+        vad_events=True,
+        numerals=is_nova3,
+        smart_format=True,
+        endpointing_ms=25 if is_nova3 else 300,
+    )
+    if api_key is not None:
+        kwargs["api_key"] = api_key
+    return deepgram.STT(**kwargs)
+
+
 def build_stt(settings, language="en", mixed=False):  # noqa: ANN001, ANN201 - livekit plugin types optional
     lang = _stt_lang(language, mixed)
     # CONFIRMED in live testing (2026-06-10): nova-3 + language=vi returns NO
@@ -129,17 +166,13 @@ def build_stt(settings, language="en", mixed=False):  # noqa: ANN001, ANN201 - l
     model = "nova-3" if lang in ("en", "multi") else "nova-2"
     provider = settings.stt_provider
     if provider == "deepgram" and settings.deepgram_api_key:
-        from livekit.plugins import deepgram  # noqa: PLC0415
-
-        return deepgram.STT(api_key=settings.deepgram_api_key, language=lang, model=model)
+        return _deepgram_stt(lang, model, api_key=settings.deepgram_api_key)
     if provider == "soniox" and settings.soniox_api_key:
         from livekit.plugins import soniox  # noqa: PLC0415
 
         return soniox.STT(api_key=settings.soniox_api_key)
     log.warning("build_stt: no configured STT provider/key; using Deepgram default")
-    from livekit.plugins import deepgram  # noqa: PLC0415
-
-    return deepgram.STT(language=lang, model=model)
+    return _deepgram_stt(lang, model)
 
 
 def build_llm(settings):  # noqa: ANN001, ANN201
