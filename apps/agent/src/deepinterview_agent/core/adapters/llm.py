@@ -42,17 +42,41 @@ def _schema_prompt(system: str, schema: type) -> str:
 
 
 def _loads_json(text: str) -> Any:
-    """Parse JSON from an LLM response, tolerating ```json fences / stray prose."""
+    """Parse JSON from an LLM response, tolerating ```json fences, stray prose, and
+    *trailing* "Extra data".
+
+    The keystone failure this fixes: the question planner has the largest schema,
+    so its real Gemini response is the biggest — and a complete JSON object was
+    sometimes FOLLOWED by extra content (a second object / trailing commentary).
+    Plain ``json.loads`` raises ``Extra data`` on that, and the old greedy
+    ``\\{.*\\}`` fallback spanned to the LAST brace (swallowing the trailing junk
+    into invalid JSON), so every plan silently fell back to the generic mock —
+    an interview that asks one question literally titled "mock". ``raw_decode``
+    returns the FIRST complete JSON value and ignores anything after it.
+    """
+    import re  # noqa: PLC0415
+
     t = (text or "").strip()
+    # Strip a wrapping ```json ... ``` / ``` ... ``` markdown fence, if present.
+    if t.startswith("```"):
+        t = re.sub(r"^```[^\n]*\n?", "", t)
+        t = re.sub(r"\n?```\s*$", "", t).strip()
+    # Fast path: a single clean JSON value.
     try:
         return json.loads(t)
     except json.JSONDecodeError:
-        import re  # noqa: PLC0415
-
-        m = re.search(r"\{.*\}|\[.*\]", t, re.DOTALL)
-        if m:
-            return json.loads(m.group(0))
-        raise
+        pass
+    # Tolerant path: decode the first complete JSON value starting at the first
+    # '{' or '[', ignoring any trailing data (raw_decode is "Extra data"-safe).
+    decoder = json.JSONDecoder()
+    for i, ch in enumerate(t):
+        if ch in "{[":
+            try:
+                obj, _end = decoder.raw_decode(t, i)
+                return obj
+            except json.JSONDecodeError:
+                continue
+    raise json.JSONDecodeError("no JSON value found in LLM response", t, 0)
 
 
 class GeminiLLM:
