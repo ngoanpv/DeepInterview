@@ -23,13 +23,17 @@ const SUGGESTIONS = [
 ];
 
 /**
- * Grounded coach chat. The user asks; we call `queryKnowledge` (which proxies to
- * LightRAG or a mock), then render the answer with citation chips that link out.
+ * Grounded coach chat. The user asks; we call `askCoach` (which proxies to the
+ * agent's Study Coach or a mock), then render the answer with citation chips
+ * that link out. When a `sessionId` is provided (the prep page passes the linked
+ * interview's id via `?session=`), retrieval is scoped to THAT session's
+ * knowledge store — the same key the prep pipeline ingested the CV/JD/company
+ * intel under — so answers are grounded in the candidate's own materials.
  * The thinking state is deliberately "RAG-delay friendly" — it names the phase
  * (retrieving → grounding) so a multi-second retrieval feels intentional, not
  * stalled.
  */
-export function GroundedChat() {
+export function GroundedChat({ sessionId }: { sessionId?: string | null }) {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -66,7 +70,7 @@ export function GroundedChat() {
     setLoading(true);
 
     try {
-      const res = await askCoach(q, "en");
+      const res = await askCoach(q, "en", sessionId ?? "anonymous");
       setTurns((prev) => [
         ...prev,
         {

@@ -39,15 +39,6 @@ _INGEST_TIMEOUT = 60.0
 _QUERY_TIMEOUT = 20.0
 
 
-def _stub_track_id(req: KbIngestRequest) -> str:
-    """Deterministic offline track id: stable for a given user + file set.
-
-    No ``uuid4``/``hash()`` (both non-deterministic across runs) — a plain f-string
-    keeps the stub reproducible so callers can assert on it.
-    """
-    return f"trk-{req.user_id}-{len(req.files)}"
-
-
 async def _guarded(coro, *, label: str, timeout: float):
     """Await ``coro`` with a timeout; on ANY error return ``None`` (caller falls back)."""
     try:
@@ -57,31 +48,22 @@ async def _guarded(coro, *, label: str, timeout: float):
         return None
 
 
-async def _forward_ingest(base_url: str, req: KbIngestRequest) -> KbIngestResponse | None:
-    """POST the ingest to the LightRAG sidecar's ``/kb/ingest``; ``None`` on failure."""
-    import httpx  # noqa: PLC0415 - httpx is a core agent dep; lazy keeps import cheap
-
-    payload = {"user_id": req.user_id, "files": req.files}
-    async with httpx.AsyncClient(timeout=_INGEST_TIMEOUT) as client:
-        resp = await client.post(f"{base_url.rstrip('/')}/kb/ingest", json=payload)
-        resp.raise_for_status()
-        data = resp.json()
-    return KbIngestResponse(track_id=data.get("track_id", _stub_track_id(req)))
-
-
 @router.post("/api/kb/ingest", response_model=KbIngestResponse)
 async def kb_ingest(req: KbIngestRequest) -> KbIngestResponse:
+    # Ingest goes through the SAME knowledge adapter as /api/kb/query, so the
+    # store key (user_id) and backend selection stay consistent across both
+    # paths. With no LIGHTRAG_URL the adapter is MockKnowledge (deterministic
+    # offline stub); when configured it forwards to the sidecar's /kb/ingest and
+    # degrades to the stub on any failure rather than 5xx.
     deps = build_deps()
-    base_url = deps.settings.lightrag_url
-    if base_url:
-        forwarded = await _guarded(
-            _forward_ingest(base_url, req), label="ingest", timeout=_INGEST_TIMEOUT
-        )
-        if forwarded is not None:
-            return forwarded
-        # Sidecar configured but unreachable: degrade to the offline stub rather
-        # than 5xx, mirroring the coach's degrade-don't-raise policy.
-    return KbIngestResponse(track_id=_stub_track_id(req))
+    track_id = await _guarded(
+        deps.knowledge.ingest(req.user_id, req.files),
+        label="ingest",
+        timeout=_INGEST_TIMEOUT,
+    )
+    if track_id is None:
+        track_id = f"trk-{req.user_id}-{len(req.files)}"
+    return KbIngestResponse(track_id=track_id)
 
 
 @router.post("/api/kb/query", response_model=KbQueryResponse)

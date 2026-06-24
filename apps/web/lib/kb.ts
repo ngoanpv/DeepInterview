@@ -15,11 +15,12 @@ export type { KbQueryResponse, Citation };
 export async function queryKnowledge(
   query: string,
   lang: Language = "en",
+  sessionId = "anonymous",
 ): Promise<KbQueryResponse> {
   const res = await fetch("/api/kb/query", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, lang }),
+    body: JSON.stringify({ session_id: sessionId, query, lang }),
   });
 
   if (!res.ok) {

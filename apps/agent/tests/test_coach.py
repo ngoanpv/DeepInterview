@@ -95,10 +95,15 @@ def test_coach_chat_grounds_when_backend_configured() -> None:
             return ("Grounded context.", [Citation(title="Prep notes", url="kb://x", snippet="s")])
 
     deps.settings.lightrag_url = "http://localhost:9621"
+    original_knowledge = deps.knowledge
     deps.knowledge = _FakeKnowledge()
     try:
         req = CoachChatRequest(session_id="sess_x", query="What is exactly-once?", lang="en")
         reply = asyncio.run(run_coach_chat(req, deps))
         assert len(reply.citations) >= 1
     finally:
+        # Restore BOTH mutated fields on the shared cached deps — leaving the
+        # _FakeKnowledge in place pollutes later tests (e.g. /api/kb/ingest now
+        # calls deps.knowledge.ingest, which this double doesn't implement).
         deps.settings.lightrag_url = original
+        deps.knowledge = original_knowledge

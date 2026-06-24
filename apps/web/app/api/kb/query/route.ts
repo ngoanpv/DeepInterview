@@ -13,11 +13,14 @@ export const dynamic = "force-dynamic";
 
 /**
  * Incoming client body. We do NOT validate with the shared `KbQueryRequestSchema`
- * here: that requires `user_id` (resolved server-side, not sent by the browser)
- * and a strict `LanguageSchema`. The client only sends `{query, lang}`; `lang`
- * falls back to "en" if absent/unsupported.
+ * here: that names the store key `user_id`, but the OSS flow is auth-free and
+ * keys the knowledge store by `session_id` (the same key the prep pipeline
+ * ingests under and the Study Coach retrieves with). The client sends
+ * `{session_id?, query, lang}`; `session_id` defaults to "anonymous" and `lang`
+ * falls back to "en".
  */
 const BodySchema = z.object({
+  session_id: z.string().default("anonymous"),
   query: z.string().min(1),
   lang: LanguageSchema.catch("en").default("en"),
 });
@@ -79,14 +82,14 @@ export async function POST(request: Request) {
     return NextResponse.json(mockAnswer(body.query));
   }
 
-  const userId = user?.id ?? "anonymous";
-
   try {
     const upstream = await fetch(`${lightragUrl.replace(/\/$/, "")}/kb/query`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      // Scope retrieval by session_id — the key the prep pipeline ingested
+      // under and the agent coach queries with — so the docs are reachable.
       body: JSON.stringify({
-        user_id: userId,
+        user_id: body.session_id,
         query: body.query,
         lang: body.lang,
       }),

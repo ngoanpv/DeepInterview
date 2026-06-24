@@ -78,3 +78,53 @@ def test_run_prep_maps_search_results_into_company_citations() -> None:
     for c in ctx.company.citations:
         assert c.title
         assert c.url
+
+
+class _RecordingKnowledge:
+    """Knowledge adapter spy: records ingest calls so a test can assert that prep
+    closed the WP-8 loop with the right key + documents."""
+
+    def __init__(self) -> None:
+        self.ingests: list[tuple[str, list[str]]] = []
+
+    async def search(self, user_id: str, query: str, lang: str):  # noqa: ANN201
+        return ("", [])
+
+    async def ingest(self, user_id: str, files: list[str]) -> str:
+        self.ingests.append((user_id, list(files)))
+        return f"trk-{user_id}-{len(files)}"
+
+
+def test_run_prep_ingests_materials_keyed_by_session_id(monkeypatch) -> None:
+    """Prep must ingest the CV/JD/company intel into the knowledge store keyed by
+    session_id — the SAME key the Study Coach retrieves with — so the grounded
+    coach loop is reachable (the WP-8 acceptance was structurally unmet before)."""
+    deps = build_deps()
+    recorder = _RecordingKnowledge()
+    monkeypatch.setattr(deps, "knowledge", recorder)
+
+    session_id = asyncio.run(run_prep(_request(), deps))
+
+    assert recorder.ingests, "prep must ingest the prep materials"
+    key, files = recorder.ingests[0]
+    # Keyed by session_id (not user.id) — aligns ingest with the coach's query key.
+    assert key == session_id
+    blob = "\n\n".join(files)
+    assert "CANDIDATE CV" in blob
+    assert "JOB DESCRIPTION" in blob
+    # The actual JD content is carried through, not just a header.
+    assert "distributed payment systems" in blob
+
+
+def test_run_prep_ingest_failure_does_not_break_prep(monkeypatch) -> None:
+    """A knowledge-ingest failure must NEVER turn a successful prep into 'error':
+    ingestion is strictly best-effort and self-contained."""
+    deps = build_deps()
+
+    class _BoomKnowledge(_RecordingKnowledge):
+        async def ingest(self, user_id: str, files: list[str]) -> str:
+            raise RuntimeError("kb sidecar down")
+
+    monkeypatch.setattr(deps, "knowledge", _BoomKnowledge())
+    session_id = asyncio.run(run_prep(_request(), deps))
+    assert deps.repo.get_status(session_id) == "ready"

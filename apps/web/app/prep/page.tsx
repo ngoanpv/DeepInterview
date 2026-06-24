@@ -143,7 +143,7 @@ export default async function PrepPage({
       {/* Study plan + grounded chat side by side on wide screens */}
       <section className="mt-10 grid gap-8 lg:grid-cols-[1.15fr_1fr]">
         <StudyPlan modules={studyModules} weakAreas={weakAreas} />
-        <GroundedChat />
+        <GroundedChat sessionId={sessionId} />
       </section>
 
       {/* Flashcards + mastery graph */}
