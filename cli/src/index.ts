@@ -6,21 +6,22 @@ function printHelp(): void {
   console.log(`deepinterview — DeepInterview CLI
 
 Usage:
-  deepinterview init [--force]   Create .env from .env.example and sync the
-                                 local-dev copies
+  deepinterview init             Guided setup: pick a run mode, enter provider
+                                 keys, and write the .env files
+  deepinterview init --no-input  Non-interactive: copy .env.example → .env
+                                 (for CI / scripted setups; --yes is an alias)
+  deepinterview init --force     Re-sync the local-dev copies from the root .env
+                                 (non-interactive)
 
 \`init\` writes three files:
   .env                 → read by docker compose (the full stack)
   apps/agent/.env      → read by the Python agent in local dev (pnpm dev)
   apps/web/.env.local  → read by the Next.js app in local dev (pnpm dev)
 
-Edit your provider keys in the ROOT .env only, then re-run
-\`deepinterview init --force\` to re-sync the local-dev copies.
-WARNING: --force OVERWRITES apps/agent/.env and apps/web/.env.local with the
-root .env (direct edits to the copies are lost; the root .env is kept).
-
-The interactive provider-key wizard arrives in a later milestone; for now
-\`init\` copies .env.example so you can fill in keys by hand.`);
+In a terminal, \`init\` runs an interactive wizard: choose a run mode (live voice
+/ prep-only / offline demo), then enter only the keys that mode needs (existing
+values are offered as defaults, so re-running to update a key is safe). With no
+TTY it falls back to copying .env.example so you can fill in keys by hand.`);
 }
 
 async function main(): Promise<void> {
