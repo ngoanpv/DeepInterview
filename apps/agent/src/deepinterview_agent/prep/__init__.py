@@ -31,6 +31,54 @@ __all__ = ["run_prep", "run_prep_for_session", "build_prep_graph"]
 log = get_logger(__name__)
 
 
+async def _ingest_prep_materials(
+    session_id: str,
+    req: PrepRequest,
+    cv_text: str,
+    ctx: InterviewContext,
+    deps: Deps,
+) -> None:
+    """Ingest the prep documents (CV, JD, company intel) into the session's
+    knowledge store, keyed by ``session_id``.
+
+    Best-effort and self-contained: any knowledge failure is logged and
+    swallowed so it can never turn a successful prep into an ``error``. With no
+    knowledge sidecar configured the adapter is the offline mock (a no-op that
+    returns a deterministic track id), so this stays free in the default flow.
+    """
+    files: list[str] = []
+    if cv_text and cv_text.strip():
+        files.append(f"CANDIDATE CV\n\n{cv_text.strip()}")
+    if req.jd_text and req.jd_text.strip():
+        files.append(f"JOB DESCRIPTION — {req.company}\n\n{req.jd_text.strip()}")
+
+    company = ctx.company
+    intel_parts: list[str] = []
+    if company.summary:
+        intel_parts.append(company.summary)
+    if company.interview_process:
+        intel_parts.append(
+            "Interview process:\n- " + "\n- ".join(company.interview_process)
+        )
+    if company.recent_news:
+        intel_parts.append("Recent news:\n- " + "\n- ".join(company.recent_news))
+    if intel_parts:
+        files.append(f"COMPANY INTEL — {company.name}\n\n" + "\n\n".join(intel_parts))
+
+    if not files:
+        return
+    try:
+        track_id = await deps.knowledge.ingest(session_id, files)
+        log.info(
+            "prep: ingested %d doc(s) into the knowledge store for session %s (track %s)",
+            len(files),
+            session_id,
+            track_id,
+        )
+    except Exception as exc:  # noqa: BLE001 - knowledge ingest is strictly best-effort
+        log.warning("prep: knowledge ingest failed for session %s (%s)", session_id, exc)
+
+
 async def run_prep(req: PrepRequest, deps: Deps) -> str:
     """Run the prep pipeline inline and return the new ``session_id``.
 
@@ -98,6 +146,12 @@ async def run_prep_for_session(
 
         await deps.repo.save_context(session_id, ctx)
         await deps.repo.update_status(session_id, "ready")
+
+        # Close the WP-8 loop: ingest the prep materials into THIS session's
+        # knowledge store so the Study Coach (which retrieves by session_id) can
+        # ground answers in the candidate's CV/JD/company intel. Keyed by
+        # session_id — the same key search() uses. Best-effort: never fail prep.
+        await _ingest_prep_materials(session_id, req, cv_text, ctx, deps)
     except Exception as exc:  # noqa: BLE001 - background task: record, don't propagate
         log.exception("run_prep_for_session(%s) failed: %s", session_id, exc)
         try:

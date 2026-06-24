@@ -56,3 +56,10 @@ def test_get_knowledge_returns_http_with_lightrag_url(monkeypatch) -> None:
     monkeypatch.setenv("LIGHTRAG_URL", "http://lightrag:9621")
     client = get_knowledge(Settings())
     assert isinstance(client, HttpKnowledge)
+
+
+def test_mock_knowledge_ingest_returns_deterministic_stub() -> None:
+    track = _run(MockKnowledge().ingest("sess_abc", ["doc one", "doc two"]))
+    assert track == "trk-sess_abc-2"
+    # Stable across calls (no uuid4/hash) so callers/tests can assert on it.
+    assert track == _run(MockKnowledge().ingest("sess_abc", ["doc one", "doc two"]))

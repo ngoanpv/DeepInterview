@@ -24,16 +24,37 @@ log = get_logger(__name__)
 
 # Request timeout when querying the knowledge sidecar (seconds).
 _QUERY_TIMEOUT = 20.0
+# Ingest is heavier (parse + embed), so allow longer. Mirrors api/kb.py.
+_INGEST_TIMEOUT = 60.0
+
+
+def _stub_track_id(user_id: str, files: list[str]) -> str:
+    """Deterministic offline track id (stable for a given key + file set).
+
+    No ``uuid4``/``hash()`` (non-deterministic across runs) so callers/tests can
+    assert on it.
+    """
+    return f"trk-{user_id}-{len(files)}"
 
 
 @runtime_checkable
 class KnowledgeClient(Protocol):
-    """Grounded retrieval over a user's knowledge store."""
+    """Grounded retrieval over (and ingestion into) a user's knowledge store."""
 
     async def search(
         self, user_id: str, query: str, lang: str
     ) -> tuple[str, list[Citation]]:
         """Return ``(answer, citations)`` for ``query`` over ``user_id``'s store."""
+        ...
+
+    async def ingest(self, user_id: str, files: list[str]) -> str:
+        """Ingest ``files`` (raw text or fetchable URLs) into ``user_id``'s store.
+
+        Returns a ``track_id``. The ``user_id`` key MUST match the one later
+        passed to :meth:`search`, or the ingested docs are unreachable — in the
+        OSS auth-free flow that key is the ``session_id`` (see the prep pipeline
+        and the Study Coach, which both key knowledge by session).
+        """
         ...
 
 
@@ -57,6 +78,16 @@ class HttpKnowledge:
         answer = data.get("answer", "")
         citations = [Citation(**c) for c in data.get("citations", [])]
         return (answer, citations)
+
+    async def ingest(self, user_id: str, files: list[str]) -> str:
+        import httpx  # noqa: PLC0415 - httpx is a core agent dep; lazy keeps import cheap
+
+        payload = {"user_id": user_id, "files": files}
+        async with httpx.AsyncClient(timeout=_INGEST_TIMEOUT) as client:
+            resp = await client.post(f"{self._base_url}/kb/ingest", json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+        return data.get("track_id", _stub_track_id(user_id, files))
 
 
 class MockKnowledge:
@@ -85,6 +116,10 @@ class MockKnowledge:
             ),
         ]
         return (answer, citations)
+
+    async def ingest(self, user_id: str, files: list[str]) -> str:
+        """Offline no-op: there is no store, so just return a deterministic id."""
+        return _stub_track_id(user_id, files)
 
 
 def _lightrag_url(settings: Settings) -> str | None:
