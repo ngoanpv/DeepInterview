@@ -13,7 +13,7 @@
 # (docker-compose.yml already sets `context: .` + this dockerfile.)
 
 # ---- deps: install the full workspace (need every member's manifest) --------
-FROM node:22-slim AS deps
+FROM node:26-slim AS deps
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -29,7 +29,7 @@ COPY cli/package.json cli/package.json
 RUN pnpm install --frozen-lockfile
 
 # ---- builder: build @deepinterview/shared then the web app ------------------
-FROM node:22-slim AS builder
+FROM node:26-slim AS builder
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -66,7 +66,7 @@ RUN mkdir -p apps/web/public
 RUN pnpm build --filter @deepinterview/web...
 
 # ---- runner: slim standalone server ----------------------------------------
-FROM node:22-slim AS runner
+FROM node:26-slim AS runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
