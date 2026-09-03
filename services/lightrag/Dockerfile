@@ -3,7 +3,7 @@
 # Default build installs the NaiveRAG backend only (fastapi/uvicorn/pydantic) so the
 # image is small and runs fully offline. To ship the real LightRAG + RAG-Anything +
 # bge-m3 stack, add `--extra rag` to the `uv sync` below and set RAG_BACKEND=lightrag.
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 # uv: fast, reproducible installs from the copied binary. Pin the tag so a
 # breaking uv release can't silently change the image.
