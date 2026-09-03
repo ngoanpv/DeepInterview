@@ -15,7 +15,7 @@
 # BUILD CONTEXT = repo root (matches docker-compose.yml `context: .`):
 #     docker build -f apps/agent/Dockerfile -t deepinterview-agent .
 
-FROM python:3.11-slim AS base
+FROM python:3.14-slim AS base
 
 # uv: fast, reproducible installs from the published binary. Pin the tag so a
 # breaking uv release can't silently change the image.
