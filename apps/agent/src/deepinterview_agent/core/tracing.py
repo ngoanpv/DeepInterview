@@ -319,7 +319,18 @@ def start_trace(
                 **({"error": error[:500]} if error else {}),
             }
         )
-        _current_trace.reset(token)
+        try:
+            _current_trace.reset(token)
+        except ValueError:
+            # A LiveKit job opens its trace in the entrypoint task but runs
+            # shutdown callbacks in a separate asyncio Context. ContextVar
+            # tokens may only be reset in the Context that created them, so a
+            # cross-context close would otherwise raise here *after* writing
+            # trace_end and abort the caller's shutdown work. Clear only when
+            # this Context inherited the same trace; never disturb an unrelated
+            # trace that may already be active in the closing Context.
+            if _current_trace.get() is info:
+                _current_trace.set(outer)
 
 
 @contextlib.contextmanager

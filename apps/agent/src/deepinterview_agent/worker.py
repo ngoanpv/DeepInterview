@@ -838,7 +838,15 @@ async def entrypoint(ctx: JobContext) -> None:
                 },
             )
         finally:
-            _live_trace.__exit__(None, None, None)
+            # Observability must never prevent the authoritative persist and
+            # scoring trigger below. LiveKit executes shutdown callbacks in a
+            # different asyncio Context from the entrypoint that opened this
+            # trace; tracing handles that normally, and this boundary remains
+            # a final guard against any optional tracing backend failure.
+            try:
+                _live_trace.__exit__(None, None, None)
+            except Exception:
+                log.exception("worker: live trace close failed for %s; continuing", session_id)
 
         # Stop the checkpointer first so it can't race the final, authoritative
         # persist below.
