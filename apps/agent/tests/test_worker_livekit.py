@@ -379,6 +379,7 @@ def _drive_entrypoint(
     *,
     live_result_ok: bool = True,
     fail_save_context: bool = False,
+    fail_trace_close: bool = False,
 ) -> SimpleNamespace:
     """Run the real ``worker.entrypoint`` offline and capture its shutdown closure.
 
@@ -425,6 +426,15 @@ def _drive_entrypoint(
     monkeypatch.setattr(worker, "build_turn_handling", lambda *a, **k: {})
     monkeypatch.setattr(worker, "build_room_options", lambda *a, **k: None)
     monkeypatch.setattr(httpx, "AsyncClient", rec_http.client_cls())
+    if fail_trace_close:
+        class _FailingTrace:
+            def __enter__(self) -> str:
+                return "tr_failing"
+
+            def __exit__(self, *exc: object) -> None:
+                raise ValueError("trace token was created in a different Context")
+
+        monkeypatch.setattr(worker, "start_trace", lambda *a, **k: _FailingTrace())
 
     job_ctx = _FakeJobContext(_FakeRoom(session_id))
     asyncio.run(worker.entrypoint(job_ctx))
@@ -479,6 +489,19 @@ def test_shutdown_recovers_unsaved_answers_before_deciding_has_answers(
     assert score_body == {"session_id": drive.session_id}
     # The API persist succeeded, so the direct-repo fallback must stay untouched.
     assert drive.repo.calls == []
+
+
+def test_shutdown_continues_persist_and_scoring_when_trace_close_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Optional tracing failures must not strand an answered session at ready."""
+    drive = _drive_entrypoint(monkeypatch, fail_trace_close=True)
+    state.add_turn(drive.userdata, "user", _SPOKEN)
+
+    asyncio.run(drive.shutdown())
+
+    assert drive.http.urls()[0].endswith("/live-result")
+    assert drive.http.urls()[-1].endswith("/api/score")
 
 
 def test_shutdown_payload_is_json_encodable_and_parses_as_live_result_request(
