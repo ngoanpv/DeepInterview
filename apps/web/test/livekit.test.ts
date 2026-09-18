@@ -59,9 +59,7 @@ describe("createInterviewToken explicit agent dispatch (issue #67)", () => {
     };
     expect(roomConfig.agents).toHaveLength(1);
     // Default dispatch name — must match the worker's agent_name default.
-    expect(roomConfig.agents[0]?.agentName).toBe(
-      "deepinterview-interviewer",
-    );
+    expect(roomConfig.agents[0]?.agentName).toBe("deepinterview-interviewer");
     expect(JSON.parse(roomConfig.agents[0]?.metadata ?? "{}")).toEqual({
       session_id: "sess_123",
     });
