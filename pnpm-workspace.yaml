@@ -9,3 +9,8 @@ packages:
 allowBuilds:
   esbuild: true
   sharp: true
+# Pin a single @smithy/core: aws-sdk 3.1127.0's client-s3 (3.34.1) and
+# s3-request-presigner (3.33.3) otherwise resolve two copies, and the two
+# `Client` identities make getSignedUrl(S3Client) a type error (r2.ts).
+overrides:
+  "@smithy/core": "3.34.1"
