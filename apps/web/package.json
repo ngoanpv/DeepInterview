@@ -15,10 +15,10 @@
     "@aws-sdk/s3-request-presigner": "^3.1094.0",
     "@deepinterview/ee": "workspace:*",
     "@deepinterview/shared": "workspace:*",
-    "@livekit/components-react": "^2.9.23",
+    "@livekit/components-react": "^2.9.24",
     "@livekit/components-styles": "^1.2.0",
     "@supabase/ssr": "^0.12.6",
-    "@supabase/supabase-js": "^2.110.8",
+    "@supabase/supabase-js": "^2.115.0",
     "@xyflow/react": "^12.11.6",
     "clsx": "^2.1.1",
     "livekit-client": "^2.22.2",
@@ -27,10 +27,10 @@
     "next": "16.2.11",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "recharts": "^3.10.0",
+    "recharts": "^3.10.1",
     "server-only": "^0.0.1",
     "tailwind-merge": "^3.6.0",
-    "zod": "^4.4.3"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
