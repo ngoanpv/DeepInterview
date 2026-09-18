@@ -33,6 +33,16 @@ export const serverEnv = {
   get livekitApiSecret(): string | undefined {
     return process.env.LIVEKIT_API_SECRET || undefined;
   },
+  /**
+   * Dispatch name the voice worker registers under (`agent_name`).
+   * Must match the worker's `LIVEKIT_AGENT_NAME` so the token's explicit
+   * `roomConfig.agents` dispatch actually routes to it (issue #67: without an
+   * explicit dispatch the interviewer never joins — LiveKit reports the room
+   * as healthy and the UI sits on "Connecting your interviewer…" forever).
+   */
+  get livekitAgentName(): string {
+    return process.env.LIVEKIT_AGENT_NAME || "deepinterview-interviewer";
+  },
   get r2AccountId(): string | undefined {
     return process.env.R2_ACCOUNT_ID || undefined;
   },

@@ -615,7 +615,20 @@ def _internal_headers(settings) -> dict[str, str]:
 
 
 def _session_id_from_room(ctx: JobContext) -> str:
-    """Derive the session id from room metadata JSON, falling back to room name."""
+    """Derive the session id for this job.
+
+    Resolution order (first hit wins):
+      1. explicit-dispatch job metadata JSON ``{"session_id": ...}`` — what the
+         web token's ``roomConfig.agents[0].metadata`` carries (issue #67 fix);
+      2. room metadata JSON (legacy path);
+      3. room name (the interview page pins room = session id).
+    """
+    job_metadata = getattr(getattr(ctx, "job", None), "metadata", None)
+    if job_metadata:
+        try:
+            return RoomMetadata.model_validate_json(job_metadata).session_id
+        except Exception as exc:  # noqa: BLE001 - tolerate malformed metadata
+            log.warning("worker: bad job metadata, trying room metadata (%s)", exc)
     metadata = getattr(ctx.room, "metadata", None)
     if metadata:
         try:
@@ -652,6 +665,35 @@ async def _load_context_via_api(session_id: str, settings) -> InterviewContext |
     return InterviewContext.model_validate(ctx_data)
 
 
+async def _load_context_with_retry(session_id: str, settings, *, timeout_sec: float = 60.0) -> InterviewContext | None:
+    """Poll for the prepped context until prep finishes or the deadline hits.
+
+    The interview page is joinable while prep is still running, so a candidate
+    can enter the room seconds before the plan lands. A single fetch would see
+    "no ready context" and abort — leaving the browser on "Connecting your
+    interviewer…" with a healthy room and no agent (issue #67). Poll instead.
+    """
+    import asyncio
+
+    import httpx
+
+    deadline = asyncio.get_event_loop().time() + timeout_sec
+    attempt = 0
+    while True:
+        attempt += 1
+        try:
+            ctx = await _load_context_via_api(session_id, settings)
+        except (httpx.HTTPError, ValueError, KeyError):
+            ctx = None
+        if ctx is not None:
+            if attempt > 1:
+                log.info("worker: context for %s ready after %d attempts", session_id, attempt)
+            return ctx
+        if asyncio.get_event_loop().time() >= deadline:
+            return None
+        await asyncio.sleep(2.0)
+
+
 # --- entrypoint --------------------------------------------------------------
 
 
@@ -667,7 +709,10 @@ async def entrypoint(ctx: JobContext) -> None:
     await ctx.connect()
     session_id = _session_id_from_room(ctx)
 
-    interview_ctx = await _load_context_via_api(session_id, settings)
+    # The room is joinable while prep is still running — wait for the plan
+    # instead of aborting on the first "not ready yet" (which strands the
+    # candidate on "Connecting your interviewer…", issue #67).
+    interview_ctx = await _load_context_with_retry(session_id, settings)
     if interview_ctx is None:
         log.error("worker: no InterviewContext for session %s; aborting", session_id)
         return
@@ -925,6 +970,14 @@ def main() -> None:
             ws_url=settings.livekit_url,
             api_key=settings.livekit_api_key,
             api_secret=settings.livekit_api_secret,
+            # Explicit-dispatch name: the web token's roomConfig.agents requests
+            # THIS name, and LiveKit Cloud Agents routes the job to the worker
+            # registered under it. Without it the room joins with no agent
+            # listening ("Connecting your interviewer…" forever, issue #67).
+            # Local `livekit-server --dev` honors the same dispatch, so the
+            # local path keeps working once the token carries roomConfig.
+            agent_name=getattr(settings, "livekit_agent_name", None)
+            or "deepinterview-interviewer",
             # All persistence (transcript + context + scoring trigger) happens in
             # the shutdown callback; the SDK default 10s can kill the job process
             # mid-write (the live-result POST alone allows 20s). Give shutdown
