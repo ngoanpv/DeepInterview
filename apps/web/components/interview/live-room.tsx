@@ -188,9 +188,10 @@ function Scaffold({
             <span className="font-mono text-[10px] tracking-[0.16em] text-faint">
               DEEPINTERVIEW · LIVE
             </span>
-            <span className="font-serif text-[17px] text-ink">
+            {/* Page heading for screen-reader navigation (styled as before). */}
+            <h1 className="font-serif text-[17px] font-normal text-ink">
               {persona.name}
-            </span>
+            </h1>
           </div>
           {timer}
         </div>
@@ -282,6 +283,25 @@ function LiveSession({
   );
 
   const [ending, setEnding] = React.useState(false);
+
+  // Focus management on connect (issue #52): when the room first connects,
+  // move keyboard + screen-reader focus into the transcript log — the
+  // conversation landmark — so the change of context is announced and the
+  // interview is operable from the keyboard immediately. Only on the
+  // false→true transition, and never yanks focus out of an input the user is
+  // already typing in.
+  const transcriptRef = React.useRef<HTMLDivElement>(null);
+  const focusedOnConnect = React.useRef(false);
+  React.useEffect(() => {
+    if (!connected || focusedOnConnect.current) return;
+    focusedOnConnect.current = true;
+    const el = transcriptRef.current;
+    const active =
+      typeof document === "undefined" ? null : document.activeElement;
+    if (el && (active === null || active === document.body)) {
+      el.focus({ preventScroll: true });
+    }
+  }, [connected]);
 
   // A publishing mic proves capture works again — clear any stale failure banner.
   React.useEffect(() => {
@@ -377,7 +397,14 @@ function LiveSession({
     <Scaffold
       persona={persona}
       stage={<VoiceStage persona={persona} />}
-      transcript={<TranscriptPanel turns={turns} live className="h-full" />}
+      transcript={
+        <TranscriptPanel
+          turns={turns}
+          live
+          className="h-full"
+          scrollRegionRef={transcriptRef}
+        />
+      }
       timer={<SessionTimer running={connected} />}
       controls={
         <div className="flex flex-col items-center gap-3">

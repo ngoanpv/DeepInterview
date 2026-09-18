@@ -33,15 +33,37 @@ export interface TranscriptPanelProps {
   /** When true, render a subtle "listening…" affordance under the last turn. */
   live?: boolean;
   className?: string;
+  /**
+   * Optional ref to the scroll region, so the live container can move focus
+   * into the conversation when the room connects (issue #52: keyboard and
+   * screen-reader users land in the transcript instead of at the top of the
+   * page with no announcement of what changed).
+   */
+  scrollRegionRef?: React.Ref<HTMLDivElement>;
 }
 
 export function TranscriptPanel({
   turns,
   live = false,
   className,
+  scrollRegionRef,
 }: TranscriptPanelProps) {
   const messages = useMessages();
   const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  // Merge the internal autoscroll ref with the optional outer focus ref so
+  // both keep working when the live container passes one in.
+  const setRefs = React.useCallback(
+    (el: HTMLDivElement | null) => {
+      scrollRef.current = el;
+      if (typeof scrollRegionRef === "function") {
+        scrollRegionRef(el);
+      } else if (scrollRegionRef) {
+        scrollRegionRef.current = el;
+      }
+    },
+    [scrollRegionRef],
+  );
 
   // Pin to the latest turn as the transcript grows. Instant jump when the user
   // prefers reduced motion — smooth scrolling can nauseate.
@@ -85,10 +107,20 @@ export function TranscriptPanel({
       </div>
 
       <div
-        ref={scrollRef}
-        className="flex-1 space-y-3.5 overflow-y-auto px-4 py-4"
+        ref={setRefs}
+        className={cn(
+          "flex-1 space-y-3.5 overflow-y-auto px-4 py-4",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset",
+        )}
         aria-label={t(messages, "interview.transcript")}
         role="log"
+        aria-live="polite"
+        // A scrollable region must be keyboard-focusable (otherwise keyboard
+        // users can never scroll the transcript, and the live container can't
+        // move focus into the conversation on connect). `role="log"` already
+        // implies a polite live region; the explicit attribute states it for
+        // assistive tech that doesn't infer implicit semantics.
+        tabIndex={0}
       >
         {turns.length === 0 ? (
           <p className="text-[13px] leading-relaxed text-faint">
