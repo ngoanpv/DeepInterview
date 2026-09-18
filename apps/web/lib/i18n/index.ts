@@ -1,18 +1,26 @@
 import { en, type Messages } from "./messages/en";
+import { vi, type Localized } from "./messages/vi";
 
 /** Supported UI locales. English-first; more packs plug in here. */
 export type Locale = "en" | "vi";
 
 export const DEFAULT_LOCALE: Locale = "en";
 
-const dictionaries: Record<Locale, Messages> = {
+/**
+ * What message readers (`t()`, `useMessages()`) actually handle: the exact
+ * `en` key structure with widened string values, so every locale pack fits.
+ * `en`'s literals stay the parity anchor (`Messages`); packs are checked
+ * against it at compile time in their own files.
+ */
+export type Dictionary = Localized<Messages>;
+
+const dictionaries: Record<Locale, Dictionary> = {
   en,
-  // English-only for now; `vi` falls back to `en` until a pack lands.
-  vi: en,
+  vi,
 };
 
 /** Resolve the message dictionary for a locale (defaults to English). */
-export function getMessages(locale: Locale = DEFAULT_LOCALE): Messages {
+export function getMessages(locale: Locale = DEFAULT_LOCALE): Dictionary {
   return dictionaries[locale] ?? en;
 }
 
@@ -20,7 +28,7 @@ export function getMessages(locale: Locale = DEFAULT_LOCALE): Messages {
  * Read a dot-path key from a messages dictionary, e.g. `t(messages, "nav.setup")`.
  * Returns the key itself if the path is missing (visible-but-safe fallback).
  */
-export function t(messages: Messages, key: string): string {
+export function t(messages: Dictionary, key: string): string {
   const value = key
     .split(".")
     .reduce<unknown>(

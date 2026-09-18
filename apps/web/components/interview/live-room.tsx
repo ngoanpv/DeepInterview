@@ -50,7 +50,7 @@ import "@livekit/components-styles";
 import type { Persona } from "@/lib/personas";
 import { cn } from "@/lib/cn";
 import { useMessages } from "@/lib/i18n/client";
-import { t, type Messages } from "@/lib/i18n";
+import { t, type Dictionary } from "@/lib/i18n";
 import { VoiceStage, StagePreview } from "@/components/interview/voice-stage";
 import {
   TranscriptPanel,
@@ -102,7 +102,7 @@ export interface LiveRoomProps {
  * flip the switch instead of a generic "something went wrong".
  */
 function describeMicFailure(
-  messages: Messages,
+  messages: Dictionary,
   failure?: MediaDeviceFailure,
 ): string {
   switch (failure) {

@@ -5,15 +5,18 @@ import type { Messages } from "./en";
  * translated pack obviously can't match those literals, so we widen every
  * string leaf to `string` while keeping the exact key structure — any missing
  * or extra key is still a compile error (true parity), only the *values* widen.
+ *
+ * Exported so the registry (`lib/i18n/index.ts`) can type the resolved
+ * dictionary structurally instead of asserting packs back to literals.
  */
-type Localized<T> = {
+export type Localized<T> = {
   [K in keyof T]: T[K] extends string ? string : Localized<T[K]>;
 };
 
 /**
  * Vietnamese message dictionary. Mirrors the `en` key shape exactly. English
- * stays the default; activate this pack at the documented extension point in
- * `lib/i18n/index.ts` (currently `vi` falls back to `en` there).
+ * stays the default; the pack is wired into the registry in
+ * `lib/i18n/index.ts`.
  */
 export const vi: Localized<Messages> = {
   common: {
