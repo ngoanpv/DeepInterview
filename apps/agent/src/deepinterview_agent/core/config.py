@@ -131,6 +131,12 @@ class Settings(BaseSettings):
     livekit_url: str | None = None
     livekit_api_key: str | None = None
     livekit_api_secret: str | None = None
+    # Dispatch name the worker registers under. MUST match the web token's
+    # `roomConfig.agents[0].agentName` (LIVEKIT_AGENT_NAME) — explicit dispatch
+    # is how LiveKit Cloud Agents routes a job to this worker. Without it the
+    # room joins with no agent listening ("Connecting your interviewer…"
+    # forever, issue #67).
+    livekit_agent_name: str = "deepinterview-interviewer"
 
     # --- knowledge (LightRAG sidecar) ----------------------------------------
     # When set, the knowledge adapter + /api/kb/ingest forward to this base URL;

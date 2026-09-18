@@ -13,6 +13,7 @@ const KEYS = [
   "LIVEKIT_URL",
   "LIVEKIT_API_KEY",
   "LIVEKIT_API_SECRET",
+  "LIVEKIT_AGENT_NAME",
   "R2_ACCOUNT_ID",
   "R2_ACCESS_KEY_ID",
   "R2_SECRET_ACCESS_KEY",
@@ -64,5 +65,13 @@ describe("provider-configured guards (offline-safe defaults)", () => {
     expect(() => publicEnv.appUrl).not.toThrow();
     expect(publicEnv.appUrl).toBe("http://localhost:3000");
     expect(() => serverEnv.agentApiUrl).not.toThrow();
+  });
+
+  it("defaults the agent dispatch name so web and worker agree (issue #67)", () => {
+    snapshot();
+    clearAll();
+    expect(serverEnv.livekitAgentName).toBe("deepinterview-interviewer");
+    process.env.LIVEKIT_AGENT_NAME = "custom-interviewer";
+    expect(serverEnv.livekitAgentName).toBe("custom-interviewer");
   });
 });

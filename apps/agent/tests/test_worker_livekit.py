@@ -379,6 +379,7 @@ def _drive_entrypoint(
     *,
     live_result_ok: bool = True,
     fail_save_context: bool = False,
+    fail_trace_close: bool = False,
 ) -> SimpleNamespace:
     """Run the real ``worker.entrypoint`` offline and capture its shutdown closure.
 
@@ -425,6 +426,15 @@ def _drive_entrypoint(
     monkeypatch.setattr(worker, "build_turn_handling", lambda *a, **k: {})
     monkeypatch.setattr(worker, "build_room_options", lambda *a, **k: None)
     monkeypatch.setattr(httpx, "AsyncClient", rec_http.client_cls())
+    if fail_trace_close:
+        class _FailingTrace:
+            def __enter__(self) -> str:
+                return "tr_failing"
+
+            def __exit__(self, *exc: object) -> None:
+                raise ValueError("trace token was created in a different Context")
+
+        monkeypatch.setattr(worker, "start_trace", lambda *a, **k: _FailingTrace())
 
     job_ctx = _FakeJobContext(_FakeRoom(session_id))
     asyncio.run(worker.entrypoint(job_ctx))
@@ -479,6 +489,19 @@ def test_shutdown_recovers_unsaved_answers_before_deciding_has_answers(
     assert score_body == {"session_id": drive.session_id}
     # The API persist succeeded, so the direct-repo fallback must stay untouched.
     assert drive.repo.calls == []
+
+
+def test_shutdown_continues_persist_and_scoring_when_trace_close_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Optional tracing failures must not strand an answered session at ready."""
+    drive = _drive_entrypoint(monkeypatch, fail_trace_close=True)
+    state.add_turn(drive.userdata, "user", _SPOKEN)
+
+    asyncio.run(drive.shutdown())
+
+    assert drive.http.urls()[0].endswith("/live-result")
+    assert drive.http.urls()[-1].endswith("/api/score")
 
 
 def test_shutdown_payload_is_json_encodable_and_parses_as_live_result_request(
@@ -827,3 +850,92 @@ def test_local_provider_values_are_case_insensitive_and_aliased() -> None:
 
     # And an unknown value must NOT be treated as local.
     assert worker._unreachable_local_providers(_local_settings(stt_provider="deepgram")) == []
+
+
+# --- explicit dispatch: session id resolution (issue #67) ----------------------
+#
+# The web token now carries an explicit RoomAgentDispatch whose metadata holds
+# {"session_id": ...}. The worker must prefer it over room metadata/name —
+# otherwise a dispatched job for room X could resolve the wrong session when
+# room metadata is absent or stale, and the interview would load no context
+# (worker aborts → "Connecting your interviewer…" forever).
+
+
+def _job_ctx(room_name: str, *, job_metadata=None, room_metadata=None):
+    room = _FakeRoom(room_name)
+    room.metadata = room_metadata
+    ctx = _FakeJobContext(room)
+    ctx.job = SimpleNamespace(metadata=job_metadata)
+    return ctx
+
+
+def test_session_id_prefers_dispatch_job_metadata() -> None:
+    ctx = _job_ctx(
+        "sess_room",
+        job_metadata='{"session_id": "sess_dispatch"}',
+        room_metadata='{"session_id": "sess_room_meta"}',
+    )
+    assert worker._session_id_from_room(ctx) == "sess_dispatch"
+
+
+def test_session_id_falls_back_to_room_metadata_then_name() -> None:
+    assert (
+        worker._session_id_from_room(
+            _job_ctx("sess_room", room_metadata='{"session_id": "sess_meta"}')
+        )
+        == "sess_meta"
+    )
+    assert worker._session_id_from_room(_job_ctx("sess_room")) == "sess_room"
+
+
+def test_session_id_tolerates_malformed_job_metadata() -> None:
+    ctx = _job_ctx("sess_room", job_metadata="not-json")
+    assert worker._session_id_from_room(ctx) == "sess_room"
+
+
+def test_worker_agent_name_default_matches_web_token() -> None:
+    """Worker and web must agree on the dispatch name.
+
+    The web token requests `LIVEKIT_AGENT_NAME` (default
+    "deepinterview-interviewer") via roomConfig.agents; the worker registers
+    under the same name. A mismatch means the dispatch matches nothing and the
+    interviewer never joins.
+    """
+    from deepinterview_agent.core.config import Settings
+
+    assert Settings().livekit_agent_name == "deepinterview-interviewer"
+
+
+def test_load_context_with_retry_waits_for_prep(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Joining while prep is still running must not abort the job.
+
+    The interview page is joinable in `prep` status, so the first fetch can
+    legitimately see "no ready context". The worker must poll until the plan
+    lands instead of returning with no agent in the room (issue #67).
+    """
+    ctx = _build_context()
+    calls = {"n": 0}
+
+    async def _flaky(sid: str, settings: Any) -> Any:
+        calls["n"] += 1
+        return None if calls["n"] < 3 else ctx
+
+    monkeypatch.setattr(worker, "_load_context_via_api", _flaky)
+    got = asyncio.run(
+        worker._load_context_with_retry("sess_x", SimpleNamespace(), timeout_sec=30.0)
+    )
+    assert got is ctx
+    assert calls["n"] == 3
+
+
+def test_load_context_with_retry_gives_up(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def _never(sid: str, settings: Any) -> Any:
+        return None
+
+    monkeypatch.setattr(worker, "_load_context_via_api", _never)
+    got = asyncio.run(
+        worker._load_context_with_retry("sess_x", SimpleNamespace(), timeout_sec=0.1)
+    )
+    assert got is None

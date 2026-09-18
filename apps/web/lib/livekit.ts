@@ -1,5 +1,9 @@
 import "server-only";
-import { AccessToken } from "livekit-server-sdk";
+import {
+  AccessToken,
+  RoomAgentDispatch,
+  RoomConfiguration,
+} from "livekit-server-sdk";
 import { isLiveKitConfigured, serverEnv } from "@/lib/env";
 
 export interface CreateInterviewTokenArgs {
@@ -20,6 +24,14 @@ export interface InterviewToken {
 
 /**
  * Mint a LiveKit access token granting a participant join+publish in `room`.
+ *
+ * The token carries an EXPLICIT agent dispatch (`roomConfig.agents`): the
+ * voice worker registers under `LIVEKIT_AGENT_NAME` and LiveKit Cloud Agents
+ * only routes a job to it when the token requests it. Without this the room
+ * joins fine with no agent listening — the exact "Connecting your
+ * interviewer…" hang in issue #67. The dispatch metadata carries the
+ * session id so the worker can resolve its InterviewContext even when room
+ * metadata is absent.
  *
  * Throws a clear error when LiveKit is not configured — call only behind an
  * `isLiveKitConfigured()` check (the token route does this). Never throws at import.
@@ -52,6 +64,20 @@ export async function createInterviewToken({
     canPublish: true,
     canSubscribe: true,
     canPublishData: true,
+  });
+
+  // Explicit dispatch: route the interviewer worker into THIS room. `room`
+  // IS the session id (interview page pins room = verified session id), and
+  // the metadata lets the worker resolve it without depending on room
+  // metadata being set. `livekitAgentName` must match the worker's
+  // `agent_name` (LIVEKIT_AGENT_NAME) or the dispatch matches nothing.
+  at.roomConfig = new RoomConfiguration({
+    agents: [
+      new RoomAgentDispatch({
+        agentName: serverEnv.livekitAgentName,
+        metadata: JSON.stringify({ session_id: room }),
+      }),
+    ],
   });
 
   const token = await at.toJwt();
