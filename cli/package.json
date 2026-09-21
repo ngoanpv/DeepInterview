@@ -18,7 +18,7 @@
   "dependencies": {
     "@clack/prompts": "^1.7.0",
     "@deepinterview/shared": "workspace:*",
-    "yaml": "^2.9.0"
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
