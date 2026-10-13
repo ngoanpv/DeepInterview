@@ -14,3 +14,6 @@ allowBuilds:
 # `Client` identities make getSignedUrl(S3Client) a type error (r2.ts).
 overrides:
   "@smithy/core": "3.34.1"
+# Security floors for transitive deps (Trivy HIGH): next pulls these in.
+  "sharp": "^0.35.5"
+  "source-map-js": "^1.2.2"
