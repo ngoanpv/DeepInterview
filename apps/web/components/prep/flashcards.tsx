@@ -142,7 +142,7 @@ export function Flashcards({
       {allDone || !current ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#e8f3ec]">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-ok-soft">
               <Check className="h-6 w-6 text-ok" aria-hidden />
             </span>
             <h3 className="font-serif text-xl text-ink">All caught up</h3>

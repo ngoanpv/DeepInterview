@@ -244,7 +244,7 @@ function PrepView({
               >
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center">
                   {isDone ? (
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#E8F3EC]">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ok-soft">
                       <Check className="h-3 w-3 text-ok" aria-hidden />
                     </span>
                   ) : isActive ? (

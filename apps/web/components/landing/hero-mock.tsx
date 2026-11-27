@@ -46,11 +46,11 @@ export function HeroMock() {
       aria-hidden="true"
       className="overflow-hidden rounded-2xl border border-line bg-panel shadow-[0_1px_0_rgba(0,0,0,0.02),0_24px_48px_-28px_rgba(20,20,30,0.22)]"
     >
-      <div className="flex items-center gap-2 border-b border-line-2 bg-[#FCFBF9] px-3.5 py-[11px]">
-        <span className="h-2.5 w-2.5 rounded-full bg-[#E4E0D7]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#E4E0D7]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#E4E0D7]" />
-        <span className="ml-2 rounded-md border border-line-2 bg-[#F4F1EA] px-[9px] py-[3px] font-mono text-[11.5px] text-faint">
+      <div className="flex items-center gap-2 border-b border-line-2 bg-[#FCFBF9] px-3.5 py-[11px] dark:bg-[#1d1d22]">
+        <span className="h-2.5 w-2.5 rounded-full bg-[#E4E0D7] dark:bg-[#34343A]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#E4E0D7] dark:bg-[#34343A]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#E4E0D7] dark:bg-[#34343A]" />
+        <span className="ml-2 rounded-md border border-line-2 bg-[#F4F1EA] px-[9px] py-[3px] font-mono text-[11.5px] text-faint dark:bg-[#222227]">
           deepinterview.ai/session/8f2a
         </span>
       </div>

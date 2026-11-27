@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-paper: #fbfaf8;
   --color-panel: #ffffff;
@@ -12,6 +14,7 @@
   --color-accent: #4338ca;
   --color-accent-soft: #eef0fb;
   --color-ok: #15803d;
+  --color-ok-soft: #e8f3ec;
 
   --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-serif: var(--font-fraunces), Georgia, serif;
@@ -19,6 +22,64 @@
 
   --radius: 14px;
   --radius-card: 14px;
+}
+
+:root {
+  --mastery-unseen-bg: #f4f3ef;
+  --mastery-unseen-fg: #73737b;
+  --mastery-unseen-border: #e7e3da;
+  --mastery-learning-bg: #eef0fb;
+  --mastery-learning-fg: #4338ca;
+  --mastery-learning-border: #d7d9f4;
+  --mastery-shaky-bg: #fbf2e6;
+  --mastery-shaky-fg: #9a6212;
+  --mastery-shaky-border: #efddc2;
+  --mastery-mastered-bg: #e8f3ec;
+  --mastery-mastered-fg: #15803d;
+  --mastery-mastered-border: #cfe6d6;
+  --graph-edge: #d9d4c8;
+  --graph-arrow: #c9c3b5;
+  --avatar-grad-anime: linear-gradient(165deg, #fdf6f3 0%, #f7eef0 55%, #f0ecf6 100%);
+  --avatar-grad-superhero: linear-gradient(165deg, #f3f5fb 0%, #eceef8 55%, #e8eaf4 100%);
+  --avatar-grad-recruiter: linear-gradient(165deg, #faf9f6 0%, #f2f1ec 55%, #edefee 100%);
+  --avatar-grad-professor: linear-gradient(165deg, #f9f6f0 0%, #f0ece2 55%, #e8e4da 100%);
+}
+
+html.dark {
+  color-scheme: dark;
+  --color-paper: #111114;
+  --color-panel: #18181c;
+  --color-ink: #ececef;
+  --color-ink-soft: #c9c9d0;
+  --color-muted: #9a9aa5;
+  --color-faint: #6f6f78;
+  --color-line: #2b2b31;
+  --color-line-2: #222227;
+  --color-accent: #8b93f5;
+  --color-accent-soft: #22233a;
+  --color-ok: #4ade80;
+  --color-ok-soft: #16271d;
+  /* Components write `text-white` on `bg-ink` / `bg-accent` fills; invert it in dark mode so contrast holds. */
+  --color-white: #111114;
+
+  --mastery-unseen-bg: #1f1f24;
+  --mastery-unseen-fg: #9a9aa5;
+  --mastery-unseen-border: #2b2b31;
+  --mastery-learning-bg: #22233a;
+  --mastery-learning-fg: #a5abf7;
+  --mastery-learning-border: #34365a;
+  --mastery-shaky-bg: #2e2414;
+  --mastery-shaky-fg: #e0af68;
+  --mastery-shaky-border: #4a3a20;
+  --mastery-mastered-bg: #16271d;
+  --mastery-mastered-fg: #4ade80;
+  --mastery-mastered-border: #24402f;
+  --graph-edge: #3a3a42;
+  --graph-arrow: #4a4a54;
+  --avatar-grad-anime: linear-gradient(165deg, #3a2630 0%, #30222c 55%, #282130 100%);
+  --avatar-grad-superhero: linear-gradient(165deg, #262a4c 0%, #21243f 55%, #1d1f36 100%);
+  --avatar-grad-recruiter: linear-gradient(165deg, #26332d 0%, #212b26 55%, #1c2420 100%);
+  --avatar-grad-professor: linear-gradient(165deg, #3a3123 0%, #30291d 55%, #282318 100%);
 }
 
 @layer base {

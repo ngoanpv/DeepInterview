@@ -5,6 +5,7 @@ import { serverEnv } from "@/lib/env";
 import { SessionViewSchema } from "@/lib/session";
 import { SAMPLE_SCORECARD, SAMPLE_INTERVIEW } from "@/lib/sample-scorecard";
 import { Eyebrow } from "@/components/ui/eyebrow";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import {
@@ -200,6 +201,7 @@ function StatusShell({ children }: { children: React.ReactNode }) {
         <Link href="/" className="no-underline">
           <Eyebrow>DeepInterview</Eyebrow>
         </Link>
+        <ThemeToggle />
       </header>
       <div className="mt-16 flex justify-center">{children}</div>
     </main>
@@ -382,9 +384,12 @@ export default async function ReportPage({
         <Link href="/" className="no-underline">
           <Eyebrow>DeepInterview</Eyebrow>
         </Link>
-        {loaded.state === "sample" && (
-          <Badge variant="outline">Preview (sample data)</Badge>
-        )}
+        <div className="flex items-center gap-3">
+          {loaded.state === "sample" && (
+            <Badge variant="outline">Preview (sample data)</Badge>
+          )}
+          <ThemeToggle />
+        </div>
       </header>
 
       <div className="mt-6">

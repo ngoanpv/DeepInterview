@@ -4,6 +4,7 @@ import { Container } from "@/components/ui/container";
 import { buttonClasses } from "@/components/ui/button";
 import { BrandMark } from "@/components/ui/brand-mark";
 import { MobileMenu } from "@/components/landing/mobile-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { GITHUB_URL } from "@/lib/site";
 
 export const NAV_LINKS = [
@@ -49,6 +50,7 @@ export function Nav() {
               Sign in
             </Link>
           ) : null}
+          <ThemeToggle />
           <Link href="/setup" className={buttonClasses()}>
             Start free
           </Link>
