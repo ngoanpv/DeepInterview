@@ -939,3 +939,10 @@ def test_load_context_with_retry_gives_up(monkeypatch: pytest.MonkeyPatch) -> No
         worker._load_context_with_retry("sess_x", SimpleNamespace(), timeout_sec=0.1)
     )
     assert got is None
+
+
+def test_build_turn_handling_sets_thinking_pause_endpointing() -> None:
+    """Both semantic-EOU and fallback paths must keep the widened endpointing window."""
+    handling = worker.build_turn_handling("vi")
+    assert handling["interruption"] == {"min_words": 3}
+    assert handling["endpointing"] == {"min_delay": 1.0, "max_delay": 6.0}

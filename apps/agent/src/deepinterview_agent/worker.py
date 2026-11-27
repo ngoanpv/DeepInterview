@@ -503,14 +503,20 @@ def build_turn_handling(language: str = "en") -> dict:
       actually SAID a few transcribed words. The default (0) lets raw VAD
       energy interrupt, so a door slam or background chatter cuts the
       interviewer off mid-sentence.
+    * ``endpointing: {min_delay: 1.0, max_delay: 6.0}`` — interview answers
+      have thinking pauses; the SDK default (0.5s min / 3.0s max) ends turns
+      mid-thought.
     * Semantic end-of-turn (``MultilingualModel``) for languages it supports —
       "is the candidate done?" is judged from the transcript instead of
       waiting for clean silence.
-    * For languages the model can't judge (e.g. Vietnamese): stretch the
-      silence endpointing window instead (1.2s min / 4s max) so natural
-      pauses don't end the candidate's turn mid-sentence.
+    * For languages the model can't judge (e.g. Vietnamese): fall back to
+      silence-based endpointing with the widened window so natural pauses
+      don't end the candidate's turn mid-sentence.
     """
-    handling: dict = {"interruption": {"min_words": 3}}
+    handling: dict = {
+        "interruption": {"min_words": 3},
+        "endpointing": {"min_delay": 1.0, "max_delay": 6.0},
+    }
     if language in _EOU_MODEL_LANGS:
         try:
             from livekit.plugins.turn_detector.multilingual import (
@@ -521,7 +527,6 @@ def build_turn_handling(language: str = "en") -> dict:
             return handling
         except Exception:  # noqa: BLE001 - optional model; fall through to endpointing
             log.warning("build_turn_handling: turn-detector unavailable; using endpointing")
-    handling["endpointing"] = {"min_delay": 1.2, "max_delay": 4.0}
     return handling
 
 
@@ -971,6 +976,14 @@ def main() -> None:
     # them in Settings (.env), so pass them through explicitly to WorkerOptions.
     settings = get_settings()
     init_observability(settings)
+    # The end-of-turn model runs in an inference process the worker only starts
+    # for plugins imported in THIS (main) process. build_turn_handling imports
+    # it lazily inside each job, so without this every prediction fails with
+    # "no inference executor" and turns end on bare silence.
+    try:
+        import livekit.plugins.turn_detector.multilingual  # noqa: F401
+    except Exception:  # noqa: BLE001 - optional; build_turn_handling falls back
+        log.warning("main: turn-detector plugin unavailable; endpointing only")
     cli.run_app(
         WorkerOptions(
             entrypoint_fnc=entrypoint,
