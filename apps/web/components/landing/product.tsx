@@ -44,7 +44,7 @@ function LanguagesVisual() {
             className={
               lang.active
                 ? "rounded-lg border border-ink px-[11px] py-1.5 text-[13px] font-medium text-ink"
-                : "rounded-lg border border-line bg-[#FCFBF9] px-[11px] py-1.5 text-[13px] text-ink-soft"
+                : "rounded-lg border border-line bg-[#FCFBF9] px-[11px] py-1.5 text-[13px] text-ink-soft dark:bg-[#1d1d22]"
             }
           >
             {lang.label}

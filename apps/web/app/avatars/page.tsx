@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Eyebrow } from "@/components/ui/eyebrow";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { AvatarGallery } from "@/components/avatar/avatar-gallery";
 
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ export default function AvatarsPage() {
         <Link href="/" className="no-underline">
           <Eyebrow>DeepInterview</Eyebrow>
         </Link>
+        <ThemeToggle />
       </header>
 
       <div className="mt-10 flex flex-col gap-3">

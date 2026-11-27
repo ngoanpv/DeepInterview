@@ -41,24 +41,24 @@ const FALLBACK_STYLE: Record<
 > = {
   // Anime — warm pastel rose/peach, soft and friendly.
   anime: {
-    gradient: "linear-gradient(165deg, #fdf6f3 0%, #f7eef0 55%, #f0ecf6 100%)",
+    gradient: "var(--avatar-grad-anime)",
     glow: "radial-gradient(120% 90% at 50% 18%, rgba(225,150,170,0.22), transparent 60%)",
     accent: "#b65a78",
   },
   // Superhero — cool steel/indigo, calm and heroic.
   superhero: {
-    gradient: "linear-gradient(165deg, #f3f5fb 0%, #eceef8 55%, #e8eaf4 100%)",
+    gradient: "var(--avatar-grad-superhero)",
     glow: "radial-gradient(120% 90% at 50% 18%, rgba(67,56,202,0.20), transparent 60%)",
     accent: "#4338ca",
   },
   // Recruiter — neutral office grey-green, professional and warm.
   recruiter: {
-    gradient: "linear-gradient(165deg, #faf9f6 0%, #f2f1ec 55%, #edefee 100%)",
+    gradient: "var(--avatar-grad-recruiter)",
     glow: "radial-gradient(120% 90% at 50% 18%, rgba(120,140,130,0.20), transparent 60%)",
     accent: "#4a6b5d",
   },
   professor: {
-    gradient: "linear-gradient(165deg, #f9f6f0 0%, #f0ece2 55%, #e8e4da 100%)",
+    gradient: "var(--avatar-grad-professor)",
     glow: "radial-gradient(120% 90% at 50% 18%, rgba(160,140,100,0.20), transparent 60%)",
     accent: "#7a6b42",
   },

@@ -4,6 +4,7 @@ import { Eyebrow } from "@/components/ui/eyebrow";
 import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/language-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { ScoreCard, StudyModule } from "@deepinterview/shared";
 import { serverEnv } from "@/lib/env";
 import { SessionViewSchema } from "@/lib/session";
@@ -90,6 +91,7 @@ export default async function PrepPage({
         </Link>
         <div className="flex items-center gap-3">
           {isSample && <Badge variant="outline">Preview (sample data)</Badge>}
+          <ThemeToggle />
           <LanguageToggle />
         </div>
       </header>

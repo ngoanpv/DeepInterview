@@ -22,10 +22,26 @@ export const MASTERY_COLORS: Record<
   MasteryState,
   { bg: string; fg: string; border: string }
 > = {
-  unseen: { bg: "#f4f3ef", fg: "#73737b", border: "#e7e3da" },
-  learning: { bg: "#eef0fb", fg: "#4338ca", border: "#d7d9f4" },
-  shaky: { bg: "#fbf2e6", fg: "#9a6212", border: "#efddc2" },
-  mastered: { bg: "#e8f3ec", fg: "#15803d", border: "#cfe6d6" },
+  unseen: {
+    bg: "var(--mastery-unseen-bg)",
+    fg: "var(--mastery-unseen-fg)",
+    border: "var(--mastery-unseen-border)",
+  },
+  learning: {
+    bg: "var(--mastery-learning-bg)",
+    fg: "var(--mastery-learning-fg)",
+    border: "var(--mastery-learning-border)",
+  },
+  shaky: {
+    bg: "var(--mastery-shaky-bg)",
+    fg: "var(--mastery-shaky-fg)",
+    border: "var(--mastery-shaky-border)",
+  },
+  mastered: {
+    bg: "var(--mastery-mastered-bg)",
+    fg: "var(--mastery-mastered-fg)",
+    border: "var(--mastery-mastered-border)",
+  },
 };
 
 export function StatusChip({

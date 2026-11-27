@@ -49,7 +49,7 @@ function MasteryNodeComponent({ data }: NodeProps<MasteryFlowNode>) {
         style={{ opacity: 0, width: 1, height: 1, border: "none" }}
         isConnectable={false}
       />
-      <p className="text-[13px] font-medium" style={{ color: "#17171a" }}>
+      <p className="text-[13px] font-medium" style={{ color: "var(--color-ink)" }}>
         {data.label}
       </p>
       <p
@@ -91,10 +91,10 @@ function toFlow(graph: MasteryGraph): {
     source: e.source,
     target: e.target,
     type: "smoothstep",
-    style: { stroke: "#d9d4c8", strokeWidth: 1.5 },
+    style: { stroke: "var(--graph-edge)", strokeWidth: 1.5 },
     markerEnd: {
       type: MarkerType.ArrowClosed,
-      color: "#c9c3b5",
+      color: "var(--graph-arrow)",
       width: 16,
       height: 16,
     },
@@ -150,7 +150,7 @@ export function MasteryGraphView({
           minZoom={0.4}
           maxZoom={1.2}
         >
-          <Background color="#e7e3da" gap={22} size={1.2} />
+          <Background color="var(--color-line)" gap={22} size={1.2} />
         </ReactFlow>
       </div>
 

@@ -6,7 +6,7 @@ type BadgeVariant = "default" | "accent" | "ok" | "outline";
 const variants: Record<BadgeVariant, string> = {
   default: "bg-accent-soft text-accent border-transparent",
   accent: "bg-accent text-white border-transparent",
-  ok: "bg-[#E8F3EC] text-ok border-transparent",
+  ok: "bg-ok-soft text-ok border-transparent",
   outline: "bg-transparent text-ink-soft border-line",
 };
 
