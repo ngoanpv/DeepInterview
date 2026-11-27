@@ -15,6 +15,10 @@ export interface CreateInterviewTokenArgs {
   name?: string;
   /** Optional JSON-serializable metadata attached to the participant. */
   metadata?: Record<string, unknown>;
+  /** Dispatch a different registered worker, e.g. the Socratic coach. */
+  agentName?: string;
+  /** Extra dispatch metadata, merged over the default session id. */
+  dispatchMetadata?: Record<string, unknown>;
 }
 
 export interface InterviewToken {
@@ -41,6 +45,8 @@ export async function createInterviewToken({
   identity,
   name,
   metadata,
+  agentName = serverEnv.livekitAgentName,
+  dispatchMetadata,
 }: CreateInterviewTokenArgs): Promise<InterviewToken> {
   if (!isLiveKitConfigured()) {
     throw new Error(
@@ -74,8 +80,8 @@ export async function createInterviewToken({
   at.roomConfig = new RoomConfiguration({
     agents: [
       new RoomAgentDispatch({
-        agentName: serverEnv.livekitAgentName,
-        metadata: JSON.stringify({ session_id: room }),
+        agentName,
+        metadata: JSON.stringify({ session_id: room, ...dispatchMetadata }),
       }),
     ],
   });

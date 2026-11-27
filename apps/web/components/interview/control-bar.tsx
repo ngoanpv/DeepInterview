@@ -23,6 +23,8 @@ export interface ControlBarProps {
   disabled?: boolean;
   /** True while the end action is in flight. */
   ending?: boolean;
+  /** Override the end action label for coaching rooms. */
+  endLabel?: string;
   className?: string;
 }
 
@@ -33,6 +35,7 @@ export function ControlBar({
   disabled = false,
   ending = false,
   className,
+  endLabel,
 }: ControlBarProps) {
   const messages = useMessages();
   // Two-tap end: the first tap arms ("Tap again to end"), the second fires.
@@ -124,7 +127,7 @@ export function ControlBar({
           ? t(messages, "interview.ending")
           : armed
             ? t(messages, "interview.confirmEnd")
-            : t(messages, "interview.endButton")}
+            : (endLabel ?? t(messages, "interview.endButton"))}
       </button>
     </div>
   );

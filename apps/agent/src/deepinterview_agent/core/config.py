@@ -137,6 +137,8 @@ class Settings(BaseSettings):
     # room joins with no agent listening ("Connecting your interviewer…"
     # forever, issue #67).
     livekit_agent_name: str = "deepinterview-interviewer"
+    # Separate dispatch name for the spoken Socratic coach worker.
+    livekit_coach_agent_name: str = "deepinterview-coach"
 
     # --- knowledge (LightRAG sidecar) ----------------------------------------
     # When set, the knowledge adapter + /api/kb/ingest forward to this base URL;

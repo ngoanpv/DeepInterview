@@ -94,6 +94,8 @@ export interface LiveRoomProps {
    * the LiveKit env. Defaults to `unconfigured`.
    */
   previewReason?: "unconfigured" | "ended";
+  /** Coaching reuses the voice room with coach-specific labels and exit route. */
+  mode?: "interview" | "coach";
 }
 
 /**
@@ -154,6 +156,7 @@ function ErrorNotice({
 
 function Scaffold({
   persona,
+  mode = "interview",
   stage,
   transcript,
   timer,
@@ -162,6 +165,7 @@ function Scaffold({
   notice,
 }: {
   persona: Persona;
+  mode?: "interview" | "coach";
   stage: React.ReactNode;
   transcript: React.ReactNode;
   timer: React.ReactNode;
@@ -186,7 +190,7 @@ function Scaffold({
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
             <span className="font-mono text-[10px] tracking-[0.16em] text-faint">
-              DEEPINTERVIEW · LIVE
+              DEEPINTERVIEW · {mode === "coach" ? "SOCRATIC COACH" : "LIVE"}
             </span>
             {/* Page heading for screen-reader navigation (styled as before). */}
             <h1 className="font-serif text-[17px] font-normal text-ink">
@@ -254,11 +258,13 @@ function useAgentNeverJoined(
 
 function LiveSession({
   persona,
+  mode = "interview",
   sessionId,
   micError,
   onMicError,
 }: {
   persona: Persona;
+  mode?: "interview" | "coach";
   sessionId: string;
   /** Mic-failure banner text — owned by <LiveRoom>, which also catches room-level capture failures. */
   micError: string | null;
@@ -373,7 +379,11 @@ function LiveSession({
       // best-effort; proceed to leave regardless
     }
     // The room disconnect happens as <LiveKitRoom> unmounts on navigation.
-    router.push(`/report/${encodeURIComponent(sessionId)}`);
+    router.push(
+      mode === "coach"
+        ? `/prep?session=${encodeURIComponent(sessionId)}`
+        : `/report/${encodeURIComponent(sessionId)}`,
+    );
   }
 
   function sendText(text: string) {
@@ -396,6 +406,7 @@ function LiveSession({
   return (
     <Scaffold
       persona={persona}
+      mode={mode}
       stage={<VoiceStage persona={persona} />}
       transcript={
         <TranscriptPanel
@@ -418,6 +429,7 @@ function LiveSession({
             micEnabled={isMicrophoneEnabled}
             onToggleMute={() => void toggleMute()}
             onEnd={() => void endInterview()}
+            endLabel={mode === "coach" ? "End coaching" : undefined}
             ending={ending}
           />
         </div>
@@ -454,10 +466,12 @@ function LiveSession({
 
 function PreviewSession({
   persona,
+  mode = "interview",
   sessionId,
   reason,
 }: {
   persona: Persona;
+  mode?: "interview" | "coach";
   sessionId: string;
   reason: "unconfigured" | "ended";
 }) {
@@ -465,6 +479,7 @@ function PreviewSession({
   return (
     <Scaffold
       persona={persona}
+      mode={mode}
       stage={<StagePreview persona={persona} />}
       transcript={<TranscriptPanel turns={SAMPLE_TURNS} className="h-full" />}
       timer={<SessionTimer running={false} />}
@@ -511,11 +526,18 @@ function PreviewSession({
 /* Connecting shell — pre-mount of the genuine live path (no env notice).*/
 /* ------------------------------------------------------------------ */
 
-function ConnectingShell({ persona }: { persona: Persona }) {
+function ConnectingShell({
+  persona,
+  mode = "interview",
+}: {
+  persona: Persona;
+  mode?: "interview" | "coach";
+}) {
   const messages = useMessages();
   return (
     <Scaffold
       persona={persona}
+      mode={mode}
       stage={<StagePreview persona={persona} />}
       transcript={<TranscriptPanel turns={[]} className="h-full" />}
       timer={<SessionTimer running={false} />}
@@ -543,13 +565,14 @@ function ConnectingShell({ persona }: { persona: Persona }) {
 /* ------------------------------------------------------------------ */
 /* Connection-lost shell — honest failure state with a rejoin action.   */
 /* ------------------------------------------------------------------ */
-
 function ConnectionLostShell({
   persona,
+  mode = "interview",
   message,
   onRejoin,
 }: {
   persona: Persona;
+  mode?: "interview" | "coach";
   message: string;
   onRejoin: () => void;
 }) {
@@ -557,6 +580,7 @@ function ConnectionLostShell({
   return (
     <Scaffold
       persona={persona}
+      mode={mode}
       stage={<StagePreview persona={persona} />}
       transcript={<TranscriptPanel turns={[]} className="h-full" />}
       timer={<SessionTimer running={false} />}
@@ -598,6 +622,7 @@ export function LiveRoom({
   token,
   url,
   previewReason = "unconfigured",
+  mode = "interview",
 }: LiveRoomProps) {
   const router = useRouter();
   const messages = useMessages();
@@ -643,14 +668,17 @@ export function LiveRoom({
       if (reason === DisconnectReason.CLIENT_INITIATED) return;
       // The server closed the room — the interview is over; show the report.
       if (reason === DisconnectReason.ROOM_DELETED) {
-        router.push(`/report/${encodeURIComponent(sessionId)}`);
+        router.push(
+          mode === "coach"
+            ? `/prep?session=${encodeURIComponent(sessionId)}`
+            : `/report/${encodeURIComponent(sessionId)}`,
+        );
         return;
       }
       setConnectionLost(t(messages, "interview.connDropped"));
     },
-    [router, sessionId, messages],
+    [router, sessionId, mode, messages],
   );
-
   function rejoin() {
     setMicError(null);
     setConnectionLost(null);
@@ -666,6 +694,7 @@ export function LiveRoom({
         persona={persona}
         sessionId={sessionId}
         reason={previewReason}
+        mode={mode}
       />
     );
   }
@@ -674,7 +703,7 @@ export function LiveRoom({
   // markup matches and the browser-only LiveKit client spins up client-side —
   // without flashing the offline "set LIVEKIT_*" notice.
   if (!mounted) {
-    return <ConnectingShell persona={persona} />;
+    return <ConnectingShell persona={persona} mode={mode} />;
   }
 
   // Honest failure state: never leave the candidate staring at an idle avatar.
@@ -683,6 +712,7 @@ export function LiveRoom({
       <ConnectionLostShell
         persona={persona}
         message={connectionLost}
+        mode={mode}
         onRejoin={rejoin}
       />
     );
@@ -704,6 +734,7 @@ export function LiveRoom({
       <RoomAudioRenderer />
       <LiveSession
         persona={persona}
+        mode={mode}
         sessionId={sessionId}
         micError={micError}
         onMicError={setMicError}

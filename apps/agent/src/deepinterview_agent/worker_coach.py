@@ -164,6 +164,8 @@ def main() -> None:
             ws_url=settings.livekit_url,
             api_key=settings.livekit_api_key,
             api_secret=settings.livekit_api_secret,
+            agent_name=settings.livekit_coach_agent_name,
+            port=18081,
         )
     )
 
