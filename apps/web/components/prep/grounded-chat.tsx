@@ -34,14 +34,7 @@ const SUGGESTIONS = [
  * (retrieving → grounding) so a multi-second retrieval feels intentional, not
  * stalled.
  */
-export function GroundedChat({
-  sessionId,
-  startQuestion,
-}: {
-  sessionId?: string | null;
-  /** Asked once on mount — a study module's "Start" opens its lesson here. */
-  startQuestion?: string | null;
-}) {
+export function GroundedChat({ sessionId }: { sessionId?: string | null }) {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,15 +42,6 @@ export function GroundedChat({
   const scrollRef = useRef<HTMLDivElement>(null);
   // Answer in the user's chosen language, not always English.
   const locale = useLocale();
-  const startedRef = useRef(false);
-
-  // A study module's "Start" opens its lesson: ask the lesson prompt once.
-  useEffect(() => {
-    if (!startQuestion || startedRef.current) return;
-    startedRef.current = true;
-    void ask(startQuestion);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- ask once per mount
-  }, [startQuestion]);
 
   // Cycle the thinking label so a slow retrieval reads as progress.
   useEffect(() => {

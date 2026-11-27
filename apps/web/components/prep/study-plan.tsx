@@ -4,15 +4,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { buttonClasses } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { StatusChip } from "@/components/prep/status-chip";
+import { ModuleLesson } from "@/components/prep/module-lesson";
 import { SAMPLE_STUDY_PLAN, type StudyModule } from "@/lib/sample-mastery";
 
 /**
  * The gap → path view: an ordered list of study modules built from the last
  * interview's weak competencies. Server component (no interactivity) — each
  * module is a card with its competency, mastery chip, "why it's here", and two
- * CTAs: "Start" opens the module as a lesson in the coach chat beside the plan
- * (`?module=<id>#coach`), "Practice in a mock" loops back into an interview.
- * Both keep `?session=` so the page stays tied to the same interview.
+ * CTAs: "Start" opens the module's lesson right under its card
+ * (`?module=<id>`), "Practice in a mock" loops back into an interview. Start
+ * keeps `?session=` so the page stays tied to the same interview.
  */
 export function StudyPlan({
   modules = SAMPLE_STUDY_PLAN,
@@ -58,7 +59,7 @@ export function StudyPlan({
 
       <ol className="space-y-3">
         {modules.map((m, i) => (
-          <li key={m.id}>
+          <li key={m.id} id={`module-${m.id}`} className="scroll-mt-6">
             <Card>
               <CardContent className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center">
                 <span
@@ -89,7 +90,7 @@ export function StudyPlan({
 
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Link
-                    href={`/prep?${sessionQuery}module=${encodeURIComponent(m.id)}#coach`}
+                    href={`/prep?${sessionQuery}module=${encodeURIComponent(m.id)}#module-${encodeURIComponent(m.id)}`}
                     className={buttonClasses({
                       size: "sm",
                       variant: activeModuleId === m.id ? "out" : undefined,
@@ -97,8 +98,10 @@ export function StudyPlan({
                     aria-label={`Start module: ${m.title}`}
                     aria-current={activeModuleId === m.id ? "true" : undefined}
                   >
-                    {activeModuleId === m.id ? "Studying" : "Start"}
-                    <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                    {activeModuleId === m.id ? "Lesson open" : "Start"}
+                    {activeModuleId !== m.id && (
+                      <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                    )}
                   </Link>
                   <Link
                     href={`/setup?focus=${encodeURIComponent(m.competency)}`}
@@ -109,6 +112,9 @@ export function StudyPlan({
                   </Link>
                 </div>
               </CardContent>
+              {activeModuleId === m.id && (
+                <ModuleLesson module={m} sessionId={sessionId} />
+              )}
             </Card>
           </li>
         ))}

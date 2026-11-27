@@ -85,15 +85,12 @@ export default async function PrepPage({
     // Agent down / offline dev — StudyPlan renders its default sample modules.
   }
 
-  // "Start" on a study module links back here with `?module=<id>`; open that
-  // module as a lesson in the coach chat.
+  // "Start" on a study module links back here with `?module=<id>`; that
+  // module's lesson opens under its card.
   const moduleId = typeof params.module === "string" ? params.module : null;
   const activeModule =
     (studyModules ?? SAMPLE_STUDY_PLAN).find((m) => m.id === moduleId) ??
     null;
-  const lessonPrompt = activeModule
-    ? `Teach me the study module "${activeModule.title}" (${activeModule.competency}). Why it's in my plan: ${activeModule.rationale} Walk me through it step by step with a worked example, then give me one practice prompt to answer.`
-    : null;
 
   return (
     <main className="mx-auto max-w-[1100px] px-6 py-12">
@@ -163,11 +160,7 @@ export default async function PrepPage({
           activeModuleId={activeModule?.id ?? null}
         />
         <div id="coach" className="scroll-mt-6">
-          <GroundedChat
-            key={activeModule?.id ?? "free"}
-            sessionId={sessionId}
-            startQuestion={lessonPrompt}
-          />
+          <GroundedChat sessionId={sessionId} />
         </div>
       </section>
 
