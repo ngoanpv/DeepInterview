@@ -14,6 +14,10 @@ import { GroundedChat } from "@/components/prep/grounded-chat";
 import { Flashcards } from "@/components/prep/flashcards";
 import { MasteryGraphView } from "@/components/prep/mastery-graph";
 import { SocraticCta } from "@/components/prep/socratic-cta";
+import {
+  RecentSessions,
+  RememberSession,
+} from "@/components/session/recent-sessions";
 
 // Reads server-only config (`isSupabaseConfigured()`) and the per-request user;
 // must not be statically prerendered.
@@ -110,6 +114,11 @@ export default async function PrepPage({
             </>
           )}
         </p>
+        {sessionId ? (
+          <RememberSession id={sessionId} />
+        ) : (
+          <RecentSessions title="Coach on a past interview" />
+        )}
       </div>
 
       {/* Loop-back banner */}
@@ -154,7 +163,7 @@ export default async function PrepPage({
 
       {/* Voice Socratic mode */}
       <section className="mt-12">
-        <SocraticCta />
+        <SocraticCta sessionId={sessionId} />
       </section>
     </main>
   );
