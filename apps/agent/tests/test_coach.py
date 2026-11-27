@@ -71,6 +71,49 @@ def test_coach_plan_empty_when_no_weak() -> None:
     assert plan.summary  # a non-empty, encouraging message
 
 
+class _CountingLLM:
+    """Drafts a different title on every call, like a real sampled LLM."""
+
+    def __init__(self, *, fail: bool = False) -> None:
+        self.calls = 0
+        self.fail = fail
+
+    async def complete_json(self, *, system: str, user: str, schema: type):
+        self.calls += 1
+        if self.fail:
+            raise RuntimeError("llm down")
+        return schema(title=f"Draft {self.calls}", rationale="why", est_min=20)
+
+
+def _deps_with(llm: _CountingLLM):
+    import dataclasses
+
+    return dataclasses.replace(build_deps(), llm=llm)
+
+
+def test_coach_plan_is_stable_for_the_same_scorecard() -> None:
+    # Reloading the prep page must not reshuffle the plan or its module ids.
+    llm = _CountingLLM()
+    sc = _scorecard(["Stability Probe A", "Stability Probe B"])
+
+    first = asyncio.run(run_coach_plan(sc, _deps_with(llm)))
+    second = asyncio.run(run_coach_plan(sc, _deps_with(llm)))
+
+    assert second == first
+    assert llm.calls == 2  # drafted once, served from cache the second time
+
+
+def test_coach_plan_does_not_cache_a_degraded_plan() -> None:
+    sc = _scorecard(["Degraded Probe"])
+
+    asyncio.run(run_coach_plan(sc, _deps_with(_CountingLLM(fail=True))))
+    healthy = _CountingLLM()
+    plan = asyncio.run(run_coach_plan(sc, _deps_with(healthy)))
+
+    assert healthy.calls == 1
+    assert plan.modules[0].title == "Draft 1"
+
+
 def test_coach_chat_returns_grounded_reply() -> None:
     deps = build_deps()
     req = CoachChatRequest(

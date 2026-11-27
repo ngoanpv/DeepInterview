@@ -15,6 +15,7 @@ of the scorecard, so it needs no repo/storage lookup.
 from __future__ import annotations
 
 import asyncio
+from collections import OrderedDict
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
@@ -33,6 +34,12 @@ __all__ = ["run_coach_chat", "run_coach_plan"]
 
 _DEFAULT_EST_MIN = 25
 _STAGE_TIMEOUT = 60.0
+
+# Plans are LLM-drafted, so the same scorecard would get a different plan on
+# every request. Cache fully drafted plans per scorecard so the study plan (and
+# its module ids) stay stable across page loads.
+_PLAN_CACHE_MAX = 256
+_plan_cache: OrderedDict[str, StudyPlan] = OrderedDict()
 
 
 class _ModuleDraft(BaseModel):
@@ -89,11 +96,18 @@ async def run_coach_plan(scorecard: ScoreCard, deps: Deps) -> StudyPlan:
             "No weak areas from your last interview — nice work. Run another mock to stay sharp."
         )
 
+    cache_key = scorecard.model_dump_json()
+    cached = _plan_cache.get(cache_key)
+    if cached is not None:
+        _plan_cache.move_to_end(cache_key)
+        return cached
+
     score_by_comp = {cs.competency: cs for cs in scorecard.competency_scores}
     # Weakest (lowest score) first; competencies absent from the scores sort last.
     weak.sort(key=lambda c: score_by_comp[c].score if c in score_by_comp else 99.0)
 
     modules: list[StudyModule] = []
+    degraded = False
     for i, comp in enumerate(weak, start=1):
         cs = score_by_comp.get(comp)
         evidence = cs.evidence if cs is not None else ""
@@ -104,6 +118,7 @@ async def run_coach_plan(scorecard: ScoreCard, deps: Deps) -> StudyPlan:
             label=f"module:{comp}",
         )
         if draft is None:
+            degraded = True
             draft = _ModuleDraft(
                 title=f"Strengthen {comp}",
                 rationale="A focus area flagged by your last interview.",
@@ -123,7 +138,13 @@ async def run_coach_plan(scorecard: ScoreCard, deps: Deps) -> StudyPlan:
     total = sum(m.est_min for m in modules)
     plural = "s" if len(modules) != 1 else ""
     summary = f"{len(modules)} focus area{plural} from your last interview, about {total} min."
-    return StudyPlan(modules=modules, summary=summary, total_min=total)
+    plan = StudyPlan(modules=modules, summary=summary, total_min=total)
+    # A degraded plan (fallback drafts) is not cached so the next load can retry.
+    if not degraded:
+        _plan_cache[cache_key] = plan
+        if len(_plan_cache) > _PLAN_CACHE_MAX:
+            _plan_cache.popitem(last=False)
+    return plan
 
 
 async def run_coach_chat(req: CoachChatRequest, deps: Deps) -> CoachReply:

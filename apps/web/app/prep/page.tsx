@@ -8,6 +8,7 @@ import type { ScoreCard, StudyModule } from "@deepinterview/shared";
 import { serverEnv } from "@/lib/env";
 import { SessionViewSchema } from "@/lib/session";
 import { SAMPLE_SCORECARD } from "@/lib/sample-scorecard";
+import { SAMPLE_STUDY_PLAN } from "@/lib/sample-mastery";
 import { requestCoachPlan } from "@/lib/api";
 import { StudyPlan } from "@/components/prep/study-plan";
 import { GroundedChat } from "@/components/prep/grounded-chat";
@@ -55,7 +56,10 @@ async function loadScorecard(id: string): Promise<ScoreCard | null> {
 export default async function PrepPage({
   searchParams,
 }: {
-  searchParams: Promise<{ session?: string | string[] }>;
+  searchParams: Promise<{
+    session?: string | string[];
+    module?: string | string[];
+  }>;
 }) {
   // No auth gate — OSS runs without sign-in.
   const params = await searchParams;
@@ -80,6 +84,16 @@ export default async function PrepPage({
   } catch {
     // Agent down / offline dev — StudyPlan renders its default sample modules.
   }
+
+  // "Start" on a study module links back here with `?module=<id>`; open that
+  // module as a lesson in the coach chat.
+  const moduleId = typeof params.module === "string" ? params.module : null;
+  const activeModule =
+    (studyModules ?? SAMPLE_STUDY_PLAN).find((m) => m.id === moduleId) ??
+    null;
+  const lessonPrompt = activeModule
+    ? `Teach me the study module "${activeModule.title}" (${activeModule.competency}). Why it's in my plan: ${activeModule.rationale} Walk me through it step by step with a worked example, then give me one practice prompt to answer.`
+    : null;
 
   return (
     <main className="mx-auto max-w-[1100px] px-6 py-12">
@@ -142,8 +156,19 @@ export default async function PrepPage({
 
       {/* Study plan + grounded chat side by side on wide screens */}
       <section className="mt-10 grid gap-8 lg:grid-cols-[1.15fr_1fr]">
-        <StudyPlan modules={studyModules} weakAreas={weakAreas} />
-        <GroundedChat sessionId={sessionId} />
+        <StudyPlan
+          modules={studyModules}
+          weakAreas={weakAreas}
+          sessionId={sessionId}
+          activeModuleId={activeModule?.id ?? null}
+        />
+        <div id="coach" className="scroll-mt-6">
+          <GroundedChat
+            key={activeModule?.id ?? "free"}
+            sessionId={sessionId}
+            startQuestion={lessonPrompt}
+          />
+        </div>
       </section>
 
       {/* Flashcards + mastery graph */}
