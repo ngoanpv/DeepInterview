@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { UploadCloud, FileText, X } from "lucide-react";
 import {
   LANGUAGES,
@@ -9,6 +9,7 @@ import {
   type LanguageMode,
 } from "@deepinterview/shared";
 import { startSession } from "@/app/setup/actions";
+import { rememberSession } from "@/lib/recent-sessions";
 import { PERSONAS, DEFAULT_PERSONA_ID } from "@/lib/personas";
 import { useMessages } from "@/lib/i18n/client";
 import { t } from "@/lib/i18n";
@@ -78,18 +79,121 @@ const SAMPLES = [
   },
 ] as const;
 
-export function SetupForm({ r2Configured }: { r2Configured: boolean }) {
+export type InitialSetupInputs = {
+  session_id: string;
+  cv_url: string;
+  jd_text: string;
+  company: string;
+  language_mode?: { primary?: string; mixed?: boolean };
+};
+
+type SavedResume = {
+  id: string;
+  label: string;
+  cv_url: string;
+  is_file: boolean;
+  updated_at?: number | null;
+};
+
+type SavedJob = {
+  id: string;
+  label: string;
+  company: string;
+  jd_text: string;
+  updated_at?: number | null;
+};
+
+function isCvRef(value: string): boolean {
+  return /^(https?:\/\/|data:)/i.test(value.trim());
+}
+
+export function SetupForm({
+  r2Configured,
+  initialInputs,
+}: {
+  r2Configured: boolean;
+  initialInputs?: InitialSetupInputs | null;
+}) {
   const router = useRouter();
   const messages = useMessages();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const initialCv = initialInputs?.cv_url ?? "";
+  const initialLang = initialInputs?.language_mode?.primary as
+    Language | undefined;
+
   const [file, setFile] = useState<File | null>(null);
-  const [cvText, setCvText] = useState("");
-  const [jdText, setJdText] = useState("");
-  const [company, setCompany] = useState("");
-  const [primary, setPrimary] = useState<Language>("en");
-  const [mixed, setMixed] = useState(false);
+  const [savedCvUrl, setSavedCvUrl] = useState<string | null>(
+    initialCv && isCvRef(initialCv) ? initialCv : null,
+  );
+  const [cvText, setCvText] = useState(
+    initialCv && !isCvRef(initialCv) ? initialCv : "",
+  );
+  const [jdText, setJdText] = useState(initialInputs?.jd_text ?? "");
+  const [company, setCompany] = useState(initialInputs?.company ?? "");
+  const [primary, setPrimary] = useState<Language>(
+    initialLang && OFFERED.includes(initialLang) ? initialLang : "en",
+  );
+  const [mixed, setMixed] = useState(
+    Boolean(initialInputs?.language_mode?.mixed),
+  );
   const [personaId, setPersonaId] = useState(DEFAULT_PERSONA_ID);
+
+  const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
+  const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState<string>(
+    initialInputs?.session_id ?? "",
+  );
+  const [selectedJobId, setSelectedJobId] = useState<string>(
+    initialInputs?.session_id ?? "",
+  );
+
+  useEffect(() => {
+    fetch("/api/sessions/library", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { resumes: [], jobs: [] }))
+      .then((body: { resumes?: SavedResume[]; jobs?: SavedJob[] }) => {
+        setSavedResumes(body.resumes ?? []);
+        setSavedJobs(body.jobs ?? []);
+      })
+      .catch(() => {});
+  }, []);
+
+  function selectSavedResume(id: string) {
+    setSelectedResumeId(id);
+    setFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (!id) {
+      setSavedCvUrl(null);
+      setCvText("");
+      return;
+    }
+    const found = savedResumes.find((r) => r.id === id);
+    if (!found) return;
+    if (found.is_file) {
+      setSavedCvUrl(found.cv_url);
+      setCvText("");
+    } else {
+      setSavedCvUrl(null);
+      setCvText(found.cv_url);
+    }
+    setCvTouched(false);
+    setError(null);
+  }
+
+  function selectSavedJob(id: string) {
+    setSelectedJobId(id);
+    if (!id) {
+      setCompany("");
+      setJdText("");
+      return;
+    }
+    const found = savedJobs.find((j) => j.id === id);
+    if (!found) return;
+    setCompany(found.company);
+    setJdText(found.jd_text);
+    setJdTouched(false);
+    setError(null);
+  }
 
   const [dragging, setDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -107,15 +211,16 @@ export function SetupForm({ r2Configured }: { r2Configured: boolean }) {
   // Company is optional.
   const cvLen = cvText.trim().length;
   const jdLen = jdText.trim().length;
-  const cvError = !file
-    ? cvLen === 0
-      ? t(messages, "setup.needCv")
-      : cvLen < MIN_CV_CHARS
-        ? `Add a bit more — your CV text looks too short (at least ${MIN_CV_CHARS} characters).`
-        : null
-    : file.size > MAX_CV_BYTES
-      ? `That file is too large (max ${Math.floor(MAX_CV_BYTES / (1024 * 1024))} MB). Upload a smaller CV or paste the text.`
-      : null;
+  const cvError =
+    !file && !savedCvUrl
+      ? cvLen === 0
+        ? t(messages, "setup.needCv")
+        : cvLen < MIN_CV_CHARS
+          ? `Add a bit more — your CV text looks too short (at least ${MIN_CV_CHARS} characters).`
+          : null
+      : file && file.size > MAX_CV_BYTES
+        ? `That file is too large (max ${Math.floor(MAX_CV_BYTES / (1024 * 1024))} MB). Upload a smaller CV or paste the text.`
+        : null;
   const jdError =
     jdLen === 0
       ? t(messages, "setup.needJd")
@@ -213,6 +318,8 @@ export function SetupForm({ r2Configured }: { r2Configured: boolean }) {
         // so the agent can parse the real document (NOT file.text(), which
         // turns a PDF/DOCX into binary garbage).
         cv_url = await fileToDataUrl(file);
+      } else if (savedCvUrl) {
+        cv_url = savedCvUrl;
       } else {
         cv_url = "";
       }
@@ -239,6 +346,7 @@ export function SetupForm({ r2Configured }: { r2Configured: boolean }) {
       }
 
       setActiveStep(2);
+      rememberSession(result.session_id);
       // Carry the chosen persona forward (PrepRequest has no persona field yet;
       // WP-2 will persist it server-side). Query param keeps P1 stateless.
       // Route to the prep screen — it polls the agent, shows the agents
@@ -316,6 +424,25 @@ export function SetupForm({ r2Configured }: { r2Configured: boolean }) {
           {t(messages, "setup.title")}
         </h1>
         <p className="mt-2 text-ink-soft">{t(messages, "setup.subtitle")}</p>
+        {initialInputs && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-card border border-accent/25 bg-accent-soft px-4 py-2.5 text-[13px] text-accent">
+            <span>
+              Reusing saved CV &amp; JD
+              {initialInputs.company ? ` (${initialInputs.company})` : ""} —
+              tweak anything or start right away.
+            </span>
+            {savedCvUrl && (
+              <button
+                type="button"
+                onClick={() => setSavedCvUrl(null)}
+                className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-accent/30 px-2 py-0.5 text-[11.5px] hover:bg-accent/10"
+              >
+                Clear saved CV file
+                <X className="h-3 w-3" aria-hidden />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Quick demo: one-click sample CV + JD + company for fast testing */}
@@ -349,77 +476,132 @@ export function SetupForm({ r2Configured }: { r2Configured: boolean }) {
           <CardDescription>{t(messages, "setup.cvHint")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 pb-6">
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label={t(messages, "setup.cvDrop")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                fileInputRef.current?.click();
-              }
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={onDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={cn(
-              "flex cursor-pointer flex-col items-center gap-2 rounded-[10px] border border-dashed px-4 py-8 text-center transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
-              dragging
-                ? "border-accent bg-accent-soft"
-                : "border-line hover:border-ink",
-            )}
-          >
-            {file ? (
-              <span className="flex items-center gap-2 text-[14px] text-ink">
-                <FileText className="h-4 w-4 text-accent" aria-hidden />
-                {file.name}
-                <button
-                  type="button"
-                  aria-label="Remove file"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFile(null);
-                    if (fileInputRef.current) fileInputRef.current.value = "";
-                  }}
-                  className="text-muted hover:text-ink"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </span>
-            ) : (
-              <>
-                <UploadCloud className="h-5 w-5 text-muted" aria-hidden />
-                <span className="text-[13px] text-muted">
-                  {t(messages, "setup.cvDrop")}
-                </span>
-              </>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              className="hidden"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
-          </div>
+          {savedResumes.length > 0 && (
+            <div>
+              <Label htmlFor="savedResume">Saved resumes</Label>
+              <select
+                id="savedResume"
+                value={selectedResumeId}
+                onChange={(e) => selectSavedResume(e.target.value)}
+                className="mt-1.5 w-full rounded-[10px] border border-line bg-paper px-3 py-2 text-[13.5px] text-ink focus:border-accent focus:outline-none"
+              >
+                <option value="">+ Add a new resume</option>
+                {savedResumes.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          <div>
-            <Label htmlFor="cvText">{t(messages, "setup.cvPasteLabel")}</Label>
-            <Textarea
-              id="cvText"
-              rows={5}
-              placeholder={t(messages, "setup.cvPasteHint")}
-              value={cvText}
-              onChange={(e) => setCvText(e.target.value)}
-              onBlur={() => setCvTouched(true)}
-              aria-invalid={cvTouched && Boolean(cvError)}
-            />
-          </div>
+          {savedCvUrl ? (
+            <div className="flex items-center justify-between gap-3 rounded-[10px] border border-line bg-paper px-4 py-3">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <FileText
+                  className="h-4 w-4 shrink-0 text-accent"
+                  aria-hidden
+                />
+                <div className="min-w-0">
+                  <p className="truncate text-[13.5px] font-medium text-ink">
+                    {savedResumes.find((r) => r.id === selectedResumeId)
+                      ?.label ?? "Saved CV file"}
+                  </p>
+                  <p className="text-[12px] text-muted">
+                    Saved resume attached — ready to reuse
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSavedCvUrl(null);
+                  setSelectedResumeId("");
+                }}
+                className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full border border-line px-2.5 py-1 text-[12px] text-muted transition hover:border-ink-soft/40 hover:text-ink"
+              >
+                Change
+                <X className="h-3 w-3" aria-hidden />
+              </button>
+            </div>
+          ) : (
+            <>
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label={t(messages, "setup.cvDrop")}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragging(true);
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={onDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={cn(
+                  "flex cursor-pointer flex-col items-center gap-2 rounded-[10px] border border-dashed px-4 py-8 text-center transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+                  dragging
+                    ? "border-accent bg-accent-soft"
+                    : "border-line hover:border-ink",
+                )}
+              >
+                {file ? (
+                  <span className="flex items-center gap-2 text-[14px] text-ink">
+                    <FileText className="h-4 w-4 text-accent" aria-hidden />
+                    {file.name}
+                    <button
+                      type="button"
+                      aria-label="Remove file"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFile(null);
+                        if (fileInputRef.current)
+                          fileInputRef.current.value = "";
+                      }}
+                      className="text-muted hover:text-ink"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </span>
+                ) : (
+                  <>
+                    <UploadCloud className="h-5 w-5 text-muted" aria-hidden />
+                    <span className="text-[13px] text-muted">
+                      {t(messages, "setup.cvDrop")}
+                    </span>
+                  </>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  className="hidden"
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="cvText">
+                  {t(messages, "setup.cvPasteLabel")}
+                </Label>
+                <Textarea
+                  id="cvText"
+                  rows={5}
+                  placeholder={t(messages, "setup.cvPasteHint")}
+                  value={cvText}
+                  onChange={(e) => setCvText(e.target.value)}
+                  onBlur={() => setCvTouched(true)}
+                  aria-invalid={cvTouched && Boolean(cvError)}
+                />
+              </div>
+            </>
+          )}
           {cvTouched && cvError && (
             <p className="text-[13px] text-accent" role="alert">
               {cvError}
@@ -428,42 +610,69 @@ export function SetupForm({ r2Configured }: { r2Configured: boolean }) {
         </CardContent>
       </Card>
 
-      {/* JD */}
+      {/* JD & Company (merged so users can pick a saved role+company or enter a new one) */}
       <Card>
         <CardHeader>
-          <CardTitle>{t(messages, "setup.jdLabel")}</CardTitle>
+          <CardTitle>
+            {t(messages, "setup.jdLabel")} &amp;{" "}
+            {t(messages, "setup.companyLabel")}
+          </CardTitle>
           <CardDescription>{t(messages, "setup.jdHint")}</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2 pb-6">
-          <Textarea
-            rows={6}
-            value={jdText}
-            onChange={(e) => setJdText(e.target.value)}
-            onBlur={() => setJdTouched(true)}
-            aria-label={t(messages, "setup.jdLabel")}
-            aria-invalid={jdTouched && Boolean(jdError)}
-          />
-          {jdTouched && jdError && (
-            <p className="text-[13px] text-accent" role="alert">
-              {jdError}
-            </p>
+        <CardContent className="flex flex-col gap-4 pb-6">
+          {savedJobs.length > 0 && (
+            <div>
+              <Label htmlFor="savedJob">Saved job descriptions</Label>
+              <select
+                id="savedJob"
+                value={selectedJobId}
+                onChange={(e) => selectSavedJob(e.target.value)}
+                className="mt-1.5 w-full rounded-[10px] border border-line bg-paper px-3 py-2 text-[13.5px] text-ink focus:border-accent focus:outline-none"
+              >
+                <option value="">+ Add a new job description</option>
+                {savedJobs.map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {j.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
-        </CardContent>
-      </Card>
 
-      {/* Company */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t(messages, "setup.companyLabel")}</CardTitle>
-          <CardDescription>{t(messages, "setup.companyHint")}</CardDescription>
-        </CardHeader>
-        <CardContent className="pb-6">
-          <Input
-            value={company}
-            onChange={(e) => setCompany(e.target.value)}
-            placeholder="Stripe (optional)"
-            aria-label={t(messages, "setup.companyLabel")}
-          />
+          <div>
+            <Label htmlFor="company">{t(messages, "setup.companyLabel")}</Label>
+            <Input
+              id="company"
+              value={company}
+              onChange={(e) => {
+                setCompany(e.target.value);
+                if (selectedJobId) setSelectedJobId("");
+              }}
+              placeholder="Stripe (optional)"
+              aria-label={t(messages, "setup.companyLabel")}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="jdText">{t(messages, "setup.jdLabel")}</Label>
+            <Textarea
+              id="jdText"
+              rows={6}
+              value={jdText}
+              onChange={(e) => {
+                setJdText(e.target.value);
+                if (selectedJobId) setSelectedJobId("");
+              }}
+              onBlur={() => setJdTouched(true)}
+              aria-label={t(messages, "setup.jdLabel")}
+              aria-invalid={jdTouched && Boolean(jdError)}
+            />
+            {jdTouched && jdError && (
+              <p className="text-[13px] text-accent" role="alert">
+                {jdError}
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
 

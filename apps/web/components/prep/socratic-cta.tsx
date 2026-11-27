@@ -3,13 +3,14 @@ import { Mic, ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
+import { RecentSessions } from "@/components/session/recent-sessions";
 
 /**
  * Voice Socratic mode entry point. Reuses the live interview voice loop
  * (LiveKit STT→LLM→TTS) but in a teaching posture: the coach asks leading
- * questions instead of grading. Links to the coach room (placeholder target).
+ * questions instead of grading. Opens the coach room for the linked interview.
  */
-export function SocraticCta() {
+export function SocraticCta({ sessionId }: { sessionId?: string | null }) {
   return (
     <Card className="bg-ink text-white">
       <CardContent className="flex flex-col gap-5 py-6 md:flex-row md:items-center md:justify-between">
@@ -35,18 +36,27 @@ export function SocraticCta() {
         </div>
 
         <Link
-          href="/interview/coach?mode=socratic"
+          href={
+            sessionId
+              ? `/interview/coach?mode=socratic&session=${encodeURIComponent(sessionId)}`
+              : "/setup"
+          }
           className="no-underline md:shrink-0"
         >
           <Button
             variant="out"
             className="border-white/30 bg-white/0 text-white hover:border-white hover:bg-white/10"
           >
-            Start Socratic session
+            {sessionId ? "Start Socratic session" : "Start a mock first"}
             <ArrowRight className="h-4 w-4" aria-hidden />
           </Button>
         </Link>
       </CardContent>
+      {!sessionId && (
+        <CardContent className="pt-0 pb-6">
+          <RecentSessions tone="dark" title="Or coach on a past interview" />
+        </CardContent>
+      )}
     </Card>
   );
 }

@@ -11,6 +11,7 @@ lazy-imports the ``supabase`` SDK.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 from uuid import uuid4
 
@@ -157,6 +158,18 @@ class MemoryRepository:
             context=context,
             scorecard=scorecard,
         )
+
+    async def get_session_inputs(self, session_id: str) -> dict[str, Any] | None:
+        row = self._rows.get(session_id)
+        if row is None:
+            return None
+        return {
+            "session_id": row.id,
+            "cv_url": row.cv_url or "",
+            "jd_text": row.jd_text or "",
+            "company": row.company or "",
+            "language_mode": row.language_mode or {"primary": "en", "mixed": False},
+        }
 
     # --- test / inspection helpers (not part of the protocol) ----------------
     def get_status(self, session_id: str) -> str | None:
@@ -325,4 +338,13 @@ def get_repository(settings: Settings) -> SessionRepository:
             "SUPABASE_SERVICE_ROLE_KEY); falling back to the in-memory store — "
             "sessions will NOT survive a restart."
         )
+    if settings.sqlite_path:
+        return _sqlite_repo(settings.sqlite_path)
     return _MEMORY_REPO
+
+
+@lru_cache(maxsize=4)
+def _sqlite_repo(path: str) -> SessionRepository:
+    from .sqlite_repository import SqliteRepository
+
+    return SqliteRepository(path)

@@ -46,12 +46,48 @@ _ALLOWED_LIVE_STATUSES = {"no_answers", "error"}
 _TERMINAL_STATUSES = {"complete", "no_answers", "error", "rejected"}
 
 
+@router.get("/api/sessions")
+async def list_sessions(limit: int = 50) -> dict:
+    """Recent sessions for the local single-user SQLite store.
+
+    Session ids are capabilities, so listing them is only allowed when the
+    deployment is local (SQLite store, no Supabase). Everywhere else → 404.
+    """
+    deps = build_deps()
+    lister = getattr(deps.repo, "list_sessions", None)
+    if lister is None or deps.settings.supabase_url:
+        raise HTTPException(status_code=404, detail="Session listing disabled")
+    return {"sessions": await lister(limit=max(1, min(limit, 200)))}
+
+
+@router.get("/api/sessions/library")
+async def list_library(limit: int = 30) -> dict:
+    """Deduplicated saved resumes and JDs for mix-and-match setup reuse (local SQLite only)."""
+    deps = build_deps()
+    lister = getattr(deps.repo, "list_library", None)
+    if lister is None or deps.settings.supabase_url:
+        raise HTTPException(status_code=404, detail="Session library disabled")
+    return await lister(limit=max(1, min(limit, 100)))
+
+
 @router.get("/api/session/{session_id}", response_model=SessionView)
 async def get_session(session_id: str) -> SessionView:
     view = await build_deps().repo.get_session_view(session_id)
     if view is None:
         raise HTTPException(status_code=404, detail="Unknown session_id")
     return view
+
+
+@router.get("/api/session/{session_id}/inputs")
+async def get_session_inputs(session_id: str) -> dict:
+    """Return the saved CV/JD/company/language inputs so the user can redo a mock."""
+    getter = getattr(build_deps().repo, "get_session_inputs", None)
+    if getter is None:
+        raise HTTPException(status_code=404, detail="Session inputs unavailable")
+    inputs = await getter(session_id)
+    if inputs is None:
+        raise HTTPException(status_code=404, detail="Unknown session_id")
+    return inputs
 
 
 @router.post(

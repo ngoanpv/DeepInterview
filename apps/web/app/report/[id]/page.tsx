@@ -20,6 +20,7 @@ import { LanguageReportCard } from "@/components/report/language-report-card";
 import { StrengthsGaps } from "@/components/report/strengths-gaps";
 import { ModelAnswers } from "@/components/report/model-answers";
 import { ScoringPoll } from "@/components/report/scoring-poll";
+import { RememberSession } from "@/components/session/recent-sessions";
 import {
   TranscriptSection,
   type TranscriptTurn,
@@ -377,6 +378,7 @@ export default async function ReportPage({
 
   return (
     <main className="mx-auto max-w-[920px] px-6 py-12">
+      {loaded.state !== "sample" && <RememberSession id={id} />}
       {/* Header */}
       <header className="flex items-center justify-between">
         <Link href="/" className="no-underline">
