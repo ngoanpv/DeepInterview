@@ -154,7 +154,7 @@ export default async function PrepPage({
 
       {/* Voice Socratic mode */}
       <section className="mt-12">
-        <SocraticCta />
+        <SocraticCta sessionId={sessionId} />
       </section>
     </main>
   );

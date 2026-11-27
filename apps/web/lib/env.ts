@@ -43,6 +43,9 @@ export const serverEnv = {
   get livekitAgentName(): string {
     return process.env.LIVEKIT_AGENT_NAME || "deepinterview-interviewer";
   },
+  get livekitCoachAgentName(): string {
+    return process.env.LIVEKIT_COACH_AGENT_NAME || "deepinterview-coach";
+  },
   get r2AccountId(): string | undefined {
     return process.env.R2_ACCOUNT_ID || undefined;
   },

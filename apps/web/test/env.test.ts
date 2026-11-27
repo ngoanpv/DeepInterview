@@ -14,6 +14,7 @@ const KEYS = [
   "LIVEKIT_API_KEY",
   "LIVEKIT_API_SECRET",
   "LIVEKIT_AGENT_NAME",
+  "LIVEKIT_COACH_AGENT_NAME",
   "R2_ACCOUNT_ID",
   "R2_ACCESS_KEY_ID",
   "R2_SECRET_ACCESS_KEY",
@@ -73,5 +74,12 @@ describe("provider-configured guards (offline-safe defaults)", () => {
     expect(serverEnv.livekitAgentName).toBe("deepinterview-interviewer");
     process.env.LIVEKIT_AGENT_NAME = "custom-interviewer";
     expect(serverEnv.livekitAgentName).toBe("custom-interviewer");
+  });
+  it("defaults a separate coach dispatch name", () => {
+    snapshot();
+    clearAll();
+    expect(serverEnv.livekitCoachAgentName).toBe("deepinterview-coach");
+    process.env.LIVEKIT_COACH_AGENT_NAME = "custom-coach";
+    expect(serverEnv.livekitCoachAgentName).toBe("custom-coach");
   });
 });

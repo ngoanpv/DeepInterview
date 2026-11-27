@@ -9,6 +9,7 @@ const KEYS = [
   "LIVEKIT_API_KEY",
   "LIVEKIT_API_SECRET",
   "LIVEKIT_AGENT_NAME",
+  "LIVEKIT_COACH_AGENT_NAME",
 ] as const;
 
 const saved = new Map<string, string | undefined>();
@@ -32,6 +33,7 @@ function setLiveKitEnv(agentName?: string) {
   process.env.LIVEKIT_API_SECRET = "secretsecretsecretsecretsecretsecret";
   if (agentName === undefined) delete process.env.LIVEKIT_AGENT_NAME;
   else process.env.LIVEKIT_AGENT_NAME = agentName;
+  if (agentName === undefined) delete process.env.LIVEKIT_COACH_AGENT_NAME;
 }
 
 function decodePayload(jwt: string): Record<string, unknown> {
@@ -83,6 +85,27 @@ describe("createInterviewToken explicit agent dispatch (issue #67)", () => {
     expect(roomConfig.agents[0]?.agentName).toBe("custom-interviewer");
     expect(JSON.parse(roomConfig.agents[0]?.metadata ?? "{}")).toEqual({
       session_id: "sess_abc",
+    });
+  });
+  it("dispatches the Socratic coach with its mode metadata", async () => {
+    snapshot();
+    setLiveKitEnv();
+
+    const { token } = await createInterviewToken({
+      room: "sess_coach",
+      identity: "user-1",
+      agentName: "deepinterview-coach",
+      dispatchMetadata: { mode: "socratic" },
+    });
+
+    const payload = decodePayload(token);
+    const roomConfig = payload.roomConfig as {
+      agents: { agentName: string; metadata: string }[];
+    };
+    expect(roomConfig.agents[0]?.agentName).toBe("deepinterview-coach");
+    expect(JSON.parse(roomConfig.agents[0]?.metadata ?? "{}")).toEqual({
+      session_id: "sess_coach",
+      mode: "socratic",
     });
   });
 });
