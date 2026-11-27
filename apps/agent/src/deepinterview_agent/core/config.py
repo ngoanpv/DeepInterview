@@ -49,6 +49,17 @@ class Settings(BaseSettings):
     # and covers 32 languages incl. vi. Override via ELEVENLABS_MODEL.
     elevenlabs_model: str = "eleven_flash_v2_5"
 
+    # Cartesia delivery controls. Empty voice = plugin default (Katie).
+    # Speed 0.6-2.0 on sonic-3 (1.0 = normal); emotion is one of Cartesia's
+    # generation_config emotions (Calm, Neutral, Contemplative, ...).
+    # buffer=sentence flushes every sentence straight to Cartesia with zero
+    # buffering (lowest latency); buffer=cartesia lets Cartesia's own buffer
+    # see a phrase ahead so it can pace and pause naturally.
+    cartesia_voice_id: str | None = None
+    cartesia_speed: float | None = None
+    cartesia_emotion: str | None = None
+    cartesia_buffer: str = "sentence"
+
     # --- local (self-hosted) model servers ------------------------------------
     # The "runs 100% local, no cloud model keys" path. All three speak the
     # OpenAI HTTP shape, so they reuse the already-installed openai SDK +
