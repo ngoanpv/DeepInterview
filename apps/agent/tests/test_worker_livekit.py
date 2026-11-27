@@ -643,6 +643,10 @@ def _local_settings(**overrides):
         "elevenlabs_api_key": None,
         "elevenlabs_model": "eleven_flash_v2_5",
         "cartesia_api_key": None,
+        "cartesia_voice_id": None,
+        "cartesia_speed": None,
+        "cartesia_emotion": None,
+        "cartesia_buffer": "sentence",
         "gemini_tts_model": "gemini-2.5-flash-preview-tts",
     }
     base.update(overrides)
@@ -939,3 +943,32 @@ def test_load_context_with_retry_gives_up(monkeypatch: pytest.MonkeyPatch) -> No
         worker._load_context_with_retry("sess_x", SimpleNamespace(), timeout_sec=0.1)
     )
     assert got is None
+
+
+def test_build_tts_cartesia_delivery_and_buffering() -> None:
+    """CARTESIA_BUFFER=cartesia wraps the sentence tokenizer so Cartesia buffers phrases."""
+    pytest.importorskip("livekit.plugins.cartesia")
+    from livekit.agents import tokenize
+
+    default_tts = worker.build_tts(
+        _local_settings(tts_provider="cartesia", cartesia_api_key="x"),
+        "en",
+    )
+    assert isinstance(default_tts._sentence_tokenizer, tokenize.SentenceTokenizer)
+
+    buffered_tts = worker.build_tts(
+        _local_settings(
+            tts_provider="cartesia",
+            cartesia_api_key="x",
+            cartesia_voice_id="voice-123",
+            cartesia_speed=1.0,
+            cartesia_emotion="Calm",
+            cartesia_buffer="cartesia",
+        ),
+        "en",
+    )
+    assert not isinstance(buffered_tts._sentence_tokenizer, tokenize.SentenceTokenizer)
+    assert callable(buffered_tts._sentence_tokenizer.stream)
+    assert buffered_tts._opts.voice == "voice-123"
+    assert buffered_tts._opts.speed == 1.0
+    assert buffered_tts._opts.emotion == ["Calm"]

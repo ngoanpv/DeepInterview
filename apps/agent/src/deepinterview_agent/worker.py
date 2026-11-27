@@ -474,10 +474,35 @@ def build_tts(settings, language="en"):
         log.info("build_tts: %r unsupported by Cartesia; using Gemini TTS fallback", language)
         return GeminiTTS(model=settings.gemini_tts_model, api_key=settings.gemini_api_key)
 
+    class _BufferedSentences:
+        """Sentence tokenizer that is deliberately NOT a ``tokenize.SentenceTokenizer``
+        subclass (see the cartesia_buffer note below); it only delegates ``stream``."""
+
+        def __init__(self) -> None:
+            from livekit.agents import tokenize
+
+            self._inner = tokenize.blingfire.SentenceTokenizer()
+
+        def stream(self, **kwargs):
+            return self._inner.stream(**kwargs)
+
     if provider == "cartesia" and settings.cartesia_api_key:
         from livekit.plugins import cartesia
 
-        return cartesia.TTS(api_key=settings.cartesia_api_key, language=lang)
+        opts: dict = {"api_key": settings.cartesia_api_key, "language": lang}
+        if settings.cartesia_voice_id:
+            opts["voice"] = settings.cartesia_voice_id
+        if settings.cartesia_speed:
+            opts["speed"] = settings.cartesia_speed
+        if settings.cartesia_emotion:
+            opts["emotion"] = settings.cartesia_emotion
+        if settings.cartesia_buffer == "cartesia":
+            # The plugin forces max_buffer_delay_ms=0 only when the tokenizer IS a
+            # SentenceTokenizer. Hand it one through a plain wrapper: sentences still
+            # stream in one Cartesia context, but Cartesia's own buffer decides when to
+            # speak, so it sees a phrase ahead and paces naturally.
+            opts["tokenizer"] = _BufferedSentences()
+        return cartesia.TTS(**opts)
     log.warning("build_tts: no configured TTS provider/key; using Cartesia default")
     from livekit.plugins import cartesia
 
